@@ -22,6 +22,13 @@ import org.apache.spark.sql.catalyst.plans.PlanTestBase
 
 class CsvExpressionsSuite extends SparkFunSuite with ExpressionEvalHelper with PlanTestBase {
   test("infer schema of CSV strings") {
-    checkEvaluation(SchemaOfCsv(Literal.create("1,abc")), "struct<_c0:int,_c1:string>")
+    checkEvaluation(new SchemaOfCsv(Literal.create("1,abc")), "struct<_c0:int,_c1:string>")
+  }
+
+  test("infer schema of CSV strings by using options") {
+    checkEvaluation(
+      new SchemaOfCsv(Literal.create("1|abc"),
+        CreateMap(Seq(Literal.create("delimiter"), Literal.create("|")))),
+      "struct<_c0:int,_c1:string>")
   }
 }
