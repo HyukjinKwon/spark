@@ -31,7 +31,7 @@ import org.apache.spark.unsafe.types.UTF8String
       > SELECT _FUNC_('1,abc');
        struct<_c0:int,_c1:string>
   """,
-  since = "2.5.0")
+  since = "3.0.0")
 case class SchemaOfCsv(
     child: Expression,
     options: Map[String, String])
