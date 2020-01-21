@@ -246,10 +246,9 @@
   </properties>
   <repositories>
     <repository>
-      <id>maven-central</id>
-      <!-- This should be at top, it makes maven try the central repo first and then others and hence faster dep resolution -->
-      <name>Maven Repository</name>
-      <url>https://repo.maven.apache.org/maven2</url>
+      <id>gcs-mirror</id>
+      <name>GCS Maven Mirror</name>
+      <url>https://maven-central.storage-download.googleapis.com/repos/central/data</url>
       <releases>
         <enabled>true</enabled>
       </releases>
@@ -258,9 +257,10 @@
       </snapshots>
     </repository>
     <repository>
-      <id>gcs-mirror</id>
-      <name>GCS Maven Mirror</name>
-      <url>https://maven-central.storage-download.googleapis.com/repos/central/data</url>
+      <id>maven-central</id>
+      <!-- This should be at top, it makes maven try the central repo first and then others and hence faster dep resolution -->
+      <name>Maven Repository</name>
+      <url>https://repo.maven.apache.org/maven2</url>
       <releases>
         <enabled>true</enabled>
       </releases>
