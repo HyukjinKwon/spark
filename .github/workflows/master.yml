@@ -73,7 +73,6 @@ jobs:
         # In other words, in GitHub Action environment, `central` is mirrored by `Google Maven Central` first.
         # If `Google Maven Central` doesn't provide the artifact due to its slowness, `central_without_mirror` will be used.
         # Note that we aim to achieve the above while keeping the existing behavior of non-`GitHub Action` environment unchanged.
-        echo "<settings><mirrors><mirror><id>google-maven-central</id><name>GCS Maven Central mirror</name><url>https://maven-central.storage-download.googleapis.com/repos/central/data/</url><mirrorOf>central</mirrorOf></mirror></mirrors></settings>" > ~/.m2/settings.xml
         ./build/mvn -X $MAVEN_CLI_OPTS -DskipTests -Pyarn -Pmesos -Pkubernetes -Phive -P${{ matrix.hive }} -Phive-thriftserver -P${{ matrix.hadoop }} -Phadoop-cloud -Djava.version=${{ matrix.java }} install
         rm -rf ~/.m2/repository/org/apache/spark
 
@@ -113,7 +112,8 @@ jobs:
         java-version: '11'
     - name: install R
       run: |
-        echo 'deb https://cloud.r-project.org/bin/linux/ubuntu bionic-cran35/' | sudo tee -a /etc/apt/sources.list
+        
+        'deb https://cloud.r-project.org/bin/linux/ubuntu bionic-cran35/' | sudo tee -a /etc/apt/sources.list
         curl -sL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0xE298A3A825C0D65DFD57CBB651716619E084DAB9" | sudo apt-key add
         sudo apt-get update
         sudo apt-get install -y r-base r-base-dev libcurl4-openssl-dev
