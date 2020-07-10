@@ -82,9 +82,6 @@ for python in "${PYTHON_EXECS[@]}"; do
         source "$CONDA_PREFIX/etc/profile.d/conda.sh"
         CONDA_ENV_CMD="conda"
       fi
-      echo $CONDA_ENV_CMD
-      ls "$CONDA_PREFIX/etc/profile.d/conda.sh"
-      exit
       conda create -y -p "$VIRTUALENV_PATH" python=$python numpy pandas pip setuptools
       $CONDA_ENV_CMD activate "$VIRTUALENV_PATH"
     else
