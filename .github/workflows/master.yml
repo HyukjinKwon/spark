@@ -30,19 +30,6 @@ jobs:
         included-tags: [""]
         excluded-tags: [""]
         comment: [""]
-        include:
-          - modules: hive
-            java: 1.8
-            hadoop: hadoop3.2
-            hive: hive2.3
-            included-tags: org.apache.spark.tags.SlowHiveTest
-            comment: "- slow tests"
-          - modules: hive
-            java: 1.8
-            hadoop: hadoop3.2
-            hive: hive2.3
-            excluded-tags: org.apache.spark.tags.SlowHiveTest
-            comment: "- other tests"
     env:
       TEST_ONLY_MODULES: ${{ matrix.modules }}
       HADOOP_PROFILE: ${{ matrix.hadoop }}
@@ -136,66 +123,3 @@ jobs:
         mkdir -p ~/.m2
         ./dev/run-tests --parallelism 2
         rm -rf ~/.m2/repository/org/apache/spark
-
-  # Static analysis, and documentation build
-  lint:
-    name: Linters, licenses, dependencies and documentation generation
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout Spark repository
-      uses: actions/checkout@v2
-    - name: Cache Maven local repository
-      uses: actions/cache@v2
-      with:
-        path: ~/.m2/repository
-        key: docs-maven-repo-${{ hashFiles('**/pom.xml') }}
-        restore-keys: |
-          docs-maven-
-    - name: Install JDK 1.8
-      uses: actions/setup-java@v1
-      with:
-        java-version: 1.8
-    - name: Install Python 3.6
-      uses: actions/setup-python@v2
-      with:
-        python-version: 3.6
-        architecture: x64
-    - name: Install Python linter dependencies
-      run: |
-        pip3 install flake8 sphinx numpy
-    - name: Install R 3.6
-      uses: r-lib/actions/setup-r@v1
-      with:
-        r-version: 3.6
-    - name: Install R linter dependencies and SparkR
-      run: |
-        sudo apt-get install -y libcurl4-openssl-dev
-        sudo Rscript -e "install.packages(c('devtools'), repos='https://cloud.r-project.org/')"
-        sudo Rscript -e "devtools::install_github('jimhester/lintr@v2.0.0')"
-        ./R/install-dev.sh
-    - name: Install Ruby 2.7 for documentation generation
-      uses: actions/setup-ruby@v1
-      with:
-        ruby-version: 2.7
-    - name: Install dependencies for documentation generation
-      run: |
-        sudo apt-get install -y libcurl4-openssl-dev pandoc
-        pip install sphinx mkdocs numpy
-        gem install jekyll jekyll-redirect-from rouge
-        sudo Rscript -e "install.packages(c('devtools', 'testthat', 'knitr', 'rmarkdown', 'roxygen2'), repos='https://cloud.r-project.org/')"
-    - name: Scala linter
-      run: ./dev/lint-scala
-    - name: Java linter
-      run: ./dev/lint-java
-    - name: Python linter
-      run: ./dev/lint-python
-    - name: R linter
-      run: ./dev/lint-r
-    - name: License test
-      run: ./dev/check-license
-    - name: Dependencies test
-      run: ./dev/test-dependencies.sh
-    - name: Run documentation build
-      run: |
-        cd docs
-        jekyll build
