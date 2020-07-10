@@ -671,33 +671,33 @@ def main():
     # if "DOCS" in changed_modules and test_env == "amplab_jenkins":
     #    build_spark_documentation()
 
-    if any(m.should_run_build_tests for m in test_modules) and test_env != "amplab_jenkins":
-        run_build_tests()
+    # if any(m.should_run_build_tests for m in test_modules) and test_env != "amplab_jenkins":
+    #     run_build_tests()
 
     # spark build
     build_apache_spark(build_tool, extra_profiles)
 
     # backwards compatibility checks
-    if build_tool == "sbt":
-        # Note: compatibility tests only supported in sbt for now
-        detect_binary_inop_with_mima(extra_profiles)
-        # Since we did not build assembly/package before running dev/mima, we need to
-        # do it here because the tests still rely on it; see SPARK-13294 for details.
-        build_spark_assembly_sbt(extra_profiles, should_run_java_style_checks)
+    # if build_tool == "sbt":
+    #     # Note: compatibility tests only supported in sbt for now
+    #     detect_binary_inop_with_mima(extra_profiles)
+    #     # Since we did not build assembly/package before running dev/mima, we need to
+    #     # do it here because the tests still rely on it; see SPARK-13294 for details.
+    #     build_spark_assembly_sbt(extra_profiles, should_run_java_style_checks)
 
     # run the test suites
-    run_scala_tests(build_tool, extra_profiles, test_modules, excluded_tags, included_tags)
+    # run_scala_tests(build_tool, extra_profiles, test_modules, excluded_tags, included_tags)
 
     modules_with_python_tests = [m for m in test_modules if m.python_test_goals]
     if modules_with_python_tests:
         # We only run PySpark tests with coverage report in one specific job with
         # Spark master with SBT in Jenkins.
-        is_sbt_master_job = "SPARK_MASTER_SBT_HADOOP_2_7" in os.environ
-        run_python_tests(
-            modules_with_python_tests, opts.parallelism, with_coverage=is_sbt_master_job)
+        # is_sbt_master_job = "SPARK_MASTER_SBT_HADOOP_2_7" in os.environ
+        # run_python_tests(
+        #     modules_with_python_tests, opts.parallelism, with_coverage=is_sbt_master_job)
         run_python_packaging_tests()
-    if any(m.should_run_r_tests for m in test_modules):
-        run_sparkr_tests()
+    # if any(m.should_run_r_tests for m in test_modules):
+    #     run_sparkr_tests()
 
 
 def _test():

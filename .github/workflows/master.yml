@@ -25,23 +25,7 @@ jobs:
         # Note that the modules below are from sparktestsupport/modules.py.
         modules:
           - |-
-            core, unsafe, kvstore, avro,
-            network_common, network_shuffle, repl, launcher
-            examples, sketch, graphx
-          - |-
-            sql
-          - |-
-            catalyst, hive-thriftserver
-          - |-
-            streaming, sql-kafka-0-10, streaming-kafka-0-10,
-            mllib-local, mllib,
-            yarn, mesos, kubernetes, hadoop-cloud, spark-ganglia-lgpl
-          - |-
             pyspark-sql, pyspark-mllib, pyspark-resource
-          - |-
-            pyspark-core, pyspark-streaming, pyspark-ml
-          - |-
-            sparkr
         # Here, we split Hive tests into some of slow ones and the rest of them.
         included-tags: [""]
         excluded-tags: [""]
@@ -66,6 +50,8 @@ jobs:
       # Don't run the tests in parallel due to flakiness. See SparkParallelTestGrouping.
       TEST_ONLY_EXCLUDED_TAGS: ${{ matrix.excluded-tags }}
       TEST_ONLY_INCLUDED_TAGS: ${{ matrix.included-tags }}
+      # GitHub Actions' default miniconda to use in pip packaging test.
+      CONDA_PREFIX: /usr/share/miniconda
     steps:
     - name: Checkout Spark repository
       uses: actions/checkout@v2
@@ -146,10 +132,6 @@ jobs:
       run: |
         # Hive tests become flaky when running in parallel as it's too intensive.
         if [[ "$TEST_ONLY_MODULES" == "hive" ]]; then export SERIAL_SBT_TESTS=1; fi
-
-        # GitHub Actions' default miniconda to use in pip packaging test.
-        # Explicitly export the variable to be inherited.
-        export CONDA_PREFIX=/usr/share/miniconda
 
         mkdir -p ~/.m2
         ./dev/run-tests --parallelism 2
