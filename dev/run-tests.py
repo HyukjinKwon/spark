@@ -749,7 +749,7 @@ def main():
 
 
 def _test():
-    if "TEST_ONLY_MODULES" in os.environ:
+    if "GITHUB_ACTIONS" in os.environ:
         # TODO(SPARK-32252): Enable doctests back in Github Actions.
         return
 
