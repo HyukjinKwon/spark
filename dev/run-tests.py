@@ -663,7 +663,7 @@ def main():
                     os.environ["GITHUB_SHA"], target_ref=os.environ["GITHUB_PREV_SHA"])
             print("changed_files : %s" % changed_files)
             new_test_modules = list(set(determine_modules_to_test(
-                determine_modules_for_files(changed_files)), deduplicated=False
+                determine_modules_for_files(changed_files), deduplicated=False),
             ).intersection(test_modules))
 
             if modules.root not in new_test_modules:
