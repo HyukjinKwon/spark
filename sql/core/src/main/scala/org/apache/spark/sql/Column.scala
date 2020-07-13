@@ -61,7 +61,7 @@ private[sql] object Column {
 
 /**
  * A [[Column]] where an [[Encoder]] has been given for the expected input and return type.
- * To create a [[TypedColumn]], use the `as` function on a [[Column]]
+ * To  create a [[TypedColumn]], use the `as` function on a [[Column]]
  *
  * @tparam T The input type expected for this expression.  Can be `Any` if the expression is type
  *           checked by the analyzer instead of the compiler (i.e. `expr("sum(...)")`)
