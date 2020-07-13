@@ -16,7 +16,7 @@
 #
 
 """
-Worker that receives input from Piped RDD.
+Worker that receives input from Piped RDD
 """
 from __future__ import print_function
 from __future__ import absolute_import
