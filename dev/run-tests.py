@@ -79,24 +79,20 @@ def identify_changed_files_from_git_commits(patch_sha, target_branch=None, targe
          identify_changed_files_from_git_commits("50a0496a43", target_ref="6765ef9"))]
     True
     """
-    # if "GITHUB_ACTIONS" in os.environ:
-    #     # Note that Github Actions would run the tests without syncing to the latest
-    #     # master.
-    #     raw_output = subprocess.check_output(
-    #         ['git', 'diff-tree', '-m', '--no-commit-id', '--name-only', '-r', patch_sha],
-    #         universal_newlines=True)
-    # else:
-    if target_branch is None and target_ref is None:
-        raise AttributeError("must specify either target_branch or target_ref")
-    elif target_branch is not None and target_ref is not None:
+    if target_branch is not None and target_ref is not None:
         raise AttributeError("must specify either target_branch or target_ref, not both")
     if target_branch is not None:
-        diff_target = target_branch
+        diff_target = [target_branch]
         run_cmd(['git', 'fetch', 'origin', str(target_branch+':'+target_branch)])
+    elif target_ref is not None:
+        diff_target = [target_ref]
     else:
-        diff_target = target_ref
-    raw_output = subprocess.check_output(['git', 'diff', '--name-only', patch_sha, diff_target],
-                                         universal_newlines=True)
+        # If both are not specified, just show the diff from the commit only.
+        diff_target = []
+    raw_output = subprocess.check_output(
+        ['git', 'diff', '--no-commit-id', '--name-only', patch_sha] + diff_target,
+        universal_newlines=True)
+    print(raw_output)
     # Remove any empty strings
     return [f for f in raw_output.split('\n') if f]
 
