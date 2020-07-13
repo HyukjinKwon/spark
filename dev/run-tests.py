@@ -90,7 +90,7 @@ def identify_changed_files_from_git_commits(patch_sha, target_branch=None, targe
         # If both are not specified, just show the diff from the commit only.
         diff_target = []
     raw_output = subprocess.check_output(
-        ['git', 'diff', '--no-commit-id', '--name-only', patch_sha] + diff_target,
+        ['git', 'diff', '-m', '--no-commit-id', '--name-only', patch_sha] + diff_target,
         universal_newlines=True)
     print(raw_output)
     # Remove any empty strings
