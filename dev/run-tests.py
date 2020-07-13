@@ -749,6 +749,10 @@ def main():
 
 
 def _test():
+    if "TEST_ONLY_MODULES" in os.environ:
+        # TODO(SPARK-32252): Enable doctests back in Github Actions.
+        return
+
     import doctest
     failure_count = doctest.testmod()[0]
     if failure_count:
