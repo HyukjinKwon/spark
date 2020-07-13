@@ -83,7 +83,7 @@ def identify_changed_files_from_git_commits(patch_sha, target_branch=None, targe
         # Note that Github Actions would run the tests without syncing to the latest
         # master.
         raw_output = subprocess.check_output(
-            ['git', 'diff-tree', '--no-commit-id', '--name-only', '-r', patch_sha],
+            ['git', 'diff-tree', '-m', '--no-commit-id', '--name-only', '-r', patch_sha],
             universal_newlines=True)
     else:
         if target_branch is None and target_ref is None:
