@@ -95,7 +95,7 @@ jobs:
     - name: "Run tests: ${{ matrix.modules }}"
       run: |
         # Hive tests become flaky when running in parallel as it's too intensive.
-        git diff -m --no-commit-id --name-only -r ${{ github.sha }}
+        git diff -m --name-only -r $GITHUB_SHA $GITHUB_BASE_REF
         git show ${{ github.sha }}
         # if [[ "$MODULES_TO_TEST" == "hive" ]]; then export SERIAL_SBT_TESTS=1; fi
         # mkdir -p ~/.m2
