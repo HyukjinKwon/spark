@@ -664,9 +664,9 @@ def main():
     str_excluded_tags = opts.excluded_tags
     str_included_tags = opts.included_tags
     if str_excluded_tags:
-        excluded_tags.expend([t.strip() for t in str_excluded_tags.split(",")])
+        excluded_tags.extend([t.strip() for t in str_excluded_tags.split(",")])
     if str_included_tags:
-        included_tags.expend([t.strip() for t in str_included_tags.split(",")])
+        included_tags.extend([t.strip() for t in str_included_tags.split(",")])
 
     print("[info] Found the following changed modules:",
           ", ".join(x.name for x in changed_modules))
@@ -715,7 +715,7 @@ def main():
     print(changed_modules)
     print(test_modules)
     print([m for m in test_modules if m.python_test_goals])
-    print(m.should_run_r_tests for m in test_modules)
+    print([m.should_run_r_tests for m in test_modules])
     print(excluded_tags)
     print(included_tags)
 
