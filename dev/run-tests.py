@@ -79,20 +79,17 @@ def identify_changed_files_from_git_commits(patch_sha, target_branch=None, targe
          identify_changed_files_from_git_commits("50a0496a43", target_ref="6765ef9"))]
     True
     """
-    if target_branch is not None and target_ref is not None:
+    if target_branch is None and target_ref is None:
+        raise AttributeError("must specify either target_branch or target_ref")
+    elif target_branch is not None and target_ref is not None:
         raise AttributeError("must specify either target_branch or target_ref, not both")
     if target_branch is not None:
-        diff_target = [target_branch]
+        diff_target = target_branch
         run_cmd(['git', 'fetch', 'origin', str(target_branch+':'+target_branch)])
-    elif target_ref is not None:
-        diff_target = [target_ref]
     else:
-        # If both are not specified, just show the diff from the commit only.
-        diff_target = []
-    raw_output = subprocess.check_output(
-        ['git', 'diff', '--name-only', patch_sha] + diff_target,
-        universal_newlines=True)
-    print(raw_output)
+        diff_target = target_ref
+    raw_output = subprocess.check_output(['git', 'diff', '--name-only', patch_sha, diff_target],
+                                         universal_newlines=True)
     # Remove any empty strings
     return [f for f in raw_output.split('\n') if f]
 
@@ -636,9 +633,14 @@ def main():
         # If we're running the tests in Github Actions, attempt to detect and test
         # only the affected modules.
         if test_env == "github_actions":
-            base_ref = os.environ["GITHUB_BASE_REF"]
-            changed_files = identify_changed_files_from_git_commits(
-                os.environ["GITHUB_SHA"], target_branch=None if base_ref == "" else base_ref)
+            if os.environ["GITHUB_BASE_REF"] != "":
+                # Pull requests
+                changed_files = identify_changed_files_from_git_commits(
+                    os.environ["GITHUB_SHA"], target_branch=os.environ["GITHUB_BASE_REF"])
+            else:
+                # Build for each commit.
+                changed_files = identify_changed_files_from_git_commits(
+                    os.environ["GITHUB_SHA"], target_ref=os.environ["GITHUB_PREV_SHA"])
             print("changed_files : %s" % changed_files)
             test_modules = list(set(determine_modules_to_test(
                 determine_modules_for_files(changed_files))).intersection(test_modules))
