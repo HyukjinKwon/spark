@@ -85,6 +85,7 @@ def identify_changed_files_from_git_commits(patch_sha, target_branch=None, targe
         raw_output = subprocess.check_output(
             ['git', 'diff', '--no-commit-id', '--name-only', '-r', patch_sha],
             universal_newlines=True)
+        print(raw_output)
     else:
         if target_branch is None and target_ref is None:
             raise AttributeError("must specify either target_branch or target_ref")
