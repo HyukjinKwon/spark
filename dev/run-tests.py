@@ -641,8 +641,10 @@ def main():
         # only the affected modules.
         if test_env == "github_actions":
             changed_files = identify_changed_files_from_git_commits(os.environ["GITHUB_SHA"])
+            print("changed_files : %s" % changed_files)
             test_modules = list(set(determine_modules_to_test(
                 determine_modules_for_files(changed_files))).intersection(test_modules))
+            print("test_modules : %s" % test_modules)
 
         changed_modules = test_modules
 
