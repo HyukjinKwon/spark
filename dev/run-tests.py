@@ -662,14 +662,13 @@ def main():
                 changed_files = identify_changed_files_from_git_commits(
                     os.environ["GITHUB_SHA"], target_ref=os.environ["GITHUB_PREV_SHA"])
             print("changed_files : %s" % changed_files)
-            new_test_modules = list(set(determine_modules_to_test(
-                determine_modules_for_files(changed_files)), deduplicated=False
-            ).intersection(test_modules))
+            modules_to_test = determine_modules_to_test(
+                determine_modules_for_files(changed_files), deduplicated=False)
 
-            if modules.root not in new_test_modules:
+            if modules.root not in modules_to_test:
                 # If root module does not exist, only test the intersected modules.
                 # If root module is found, just run the modules as specified initially.
-                test_modules = new_test_modules
+                test_modules = list(set(modules_to_test).intersection(test_modules))
 
             print("test_modules : %s" % test_modules)
 
