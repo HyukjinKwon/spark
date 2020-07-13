@@ -127,9 +127,6 @@ def determine_modules_to_test(changed_modules):
     for module in changed_modules:
         modules_to_test = modules_to_test.union(determine_modules_to_test(module.dependent_modules))
     modules_to_test = modules_to_test.union(set(changed_modules))
-    # If we need to run all of the tests, then we should short-circuit and return 'root'
-    if modules.root in modules_to_test:
-        return [modules.root]
     return toposort_flatten(
         {m: set(m.dependencies).intersection(modules_to_test) for m in modules_to_test}, sort=True)
 
@@ -642,11 +639,18 @@ def main():
                 changed_files = identify_changed_files_from_git_commits(
                     os.environ["GITHUB_SHA"], target_ref=os.environ["GITHUB_PREV_SHA"])
             print("changed_files : %s" % changed_files)
-            test_modules = list(set(determine_modules_to_test(
+            new_test_modules = list(set(determine_modules_to_test(
                 determine_modules_for_files(changed_files))).intersection(test_modules))
+            if modules.root not in new_test_modules:
+                # If there is root, we should also test the modules.
+                # If there is no root, then just use the modules as passed initially.
+                test_modules = new_test_modules
             print("test_modules : %s" % test_modules)
 
         changed_modules = test_modules
+        if len(changed_modules) == 0:
+            print("[info] There are no modules to test, exiting without testing.")
+            return
 
     # If we're running the tests in AMPLab Jenkins, calculate the diff from the targeted branch, and
     # detect modules to test.
@@ -662,6 +666,10 @@ def main():
         changed_modules = [modules.root]
     if not test_modules:
         test_modules = determine_modules_to_test(changed_modules)
+
+     # If we need to run all of the tests, then we should short-circuit and return 'root'
+    if modules.root in test_modules:
+        test_modules = [modules.root]
 
     str_excluded_tags = opts.excluded_tags
     str_included_tags = opts.included_tags
