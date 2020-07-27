@@ -237,7 +237,7 @@ private[spark] object TestUtils {
    */
   def testCommandAvailable(command: String): Boolean = {
     val attempt = if (Utils.isWindows) {
-      Try(Process(command).run(ProcessLogger(_ => ())).exitValue())
+      Try(Process(s"WHERE $command").run(ProcessLogger(_ => ())).exitValue())
     } else {
       Try(Process(s"command -v $command").run(ProcessLogger(_ => ())).exitValue())
     }
