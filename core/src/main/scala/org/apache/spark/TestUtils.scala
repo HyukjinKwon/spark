@@ -236,12 +236,32 @@ private[spark] object TestUtils {
    * Test if a command is available.
    */
   def testCommandAvailable(command: String): Boolean = {
+    val messages0 = ArrayBuffer[String]()
+    val messages1 = ArrayBuffer[String]()
+    // scalastyle:off println
+    val logger = ProcessLogger(
+      (o: String) => messages0.append(o),
+      (e: String) => messages1.append(e))
+    // scalastyle:on println
+
     val attempt = if (Utils.isWindows) {
       Try(Process(s"WHERE $command").run(ProcessLogger(_ => ())).exitValue())
     } else {
-      Try(Process(s"command -v $command").run(ProcessLogger(_ => ())).exitValue())
+      Try(Process(s"command -v $command").run(logger).exitValue())
     }
-    attempt.isSuccess && attempt.get == 0
+    val ret = attempt.isSuccess && attempt.get == 0
+    val anotherAttempt =
+      Try(Process(command).run(ProcessLogger(_ => ())).exitValue())
+    val anotherRet = anotherAttempt.isSuccess && anotherAttempt.get == 0
+    if (ret != anotherRet) {
+      throw new IllegalArgumentException(
+        s"command -v $command, stdout: $messages0, stderr: $messages1" +
+        s"anotherAttempt.isSuccess: ${anotherAttempt.isSuccess}, " +
+        s"anotherAttempt.get: ${anotherAttempt.get}" +
+        s"attempt.isSuccess: ${attempt.isSuccess}" +
+        s"attempt.get: ${attempt.get}")
+    }
+    ret
   }
 
   /**
