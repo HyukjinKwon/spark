@@ -247,7 +247,8 @@ private[spark] object TestUtils {
     val attempt = if (Utils.isWindows) {
       Try(Process(s"WHERE $command").run(ProcessLogger(_ => ())).exitValue())
     } else {
-      Try(Runtime.getRuntime.exec(Array(s"command", "-v", command)).exitValue())
+      Try(Process(Seq(
+        "sh", "-c", s"command -v $command")).run(logger).exitValue())
     }
     val ret = attempt.isSuccess && attempt.get == 0
     val anotherAttempt =
