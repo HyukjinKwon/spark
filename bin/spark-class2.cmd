@@ -20,8 +20,6 @@ rem
 rem Figure out where the Spark framework is installed
 call "%~dp0find-spark-home.cmd"
 
-echo a
-
 call "%SPARK_HOME%\bin\load-spark-env.cmd"
 
 rem Test that an argument was given
@@ -30,16 +28,12 @@ if "x%1"=="x" (
   exit /b 1
 )
 
-echo %SPARK_SCALA_VERSION%
-
 rem Find Spark jars.
 if exist "%SPARK_HOME%\jars" (
   set SPARK_JARS_DIR="%SPARK_HOME%\jars"
 ) else (
   set SPARK_JARS_DIR="%SPARK_HOME%\assembly\target\scala-%SPARK_SCALA_VERSION%\jars"
 )
-
-echo %SPARK_JARS_DIR%
 
 if not exist "%SPARK_JARS_DIR%"\ (
   echo Failed to find Spark jars directory.

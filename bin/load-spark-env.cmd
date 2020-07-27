@@ -22,7 +22,7 @@ rem spark-env.cmd is loaded from SPARK_CONF_DIR if set, or within the current di
 rem conf\ subdirectory.
 
 set SPARK_ENV_CMD=spark-env.cmd
-if [%SPARK_ENV_LOADED%] == [] (
+if not defined SPARK_ENV_LOADED (
   set SPARK_ENV_LOADED=1
 
   if [%SPARK_CONF_DIR%] == [] (
@@ -46,7 +46,7 @@ set ENV_VARIABLE_DOC=https://spark.apache.org/docs/latest/configuration.html#env
 
 if not defined SPARK_SCALA_VERSION (
   if exist %ASSEMBLY_DIR2% if exist %ASSEMBLY_DIR1% (
-    echo Presence of build for multiple Scala versions detected (%ASSEMBLY_DIR1% and %ASSEMBLY_DIR2%).
+    echo Presence of build for multiple Scala versions detected ^(%ASSEMBLY_DIR1% and %ASSEMBLY_DIR2%^).
     echo Remove one of them or, set SPARK_SCALA_VERSION=%SCALA_VERSION_1% in spark-env.cmd.
     echo Visit %ENV_VARIABLE_DOC% for more details about setting environment variables in spark-env.cmd.
     echo Either clean one of them or, set SPARK_SCALA_VERSION in spark-env.cmd.
