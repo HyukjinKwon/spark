@@ -43,7 +43,11 @@ jobs:
         r-version: 3.6
     - name: Install R linter dependencies and SparkR
       run: |
+        echo "::add-path::/usr/local/bin
+    - name: Install dependencies for documentation generation
+      run: |
         Rscript -e 'print(version)'
+        ls /usr/local/bin
     - name: Install R linter dependencies and SparkR
       run: |
         sudo apt-get install -y libcurl4-openssl-dev
@@ -62,11 +66,6 @@ jobs:
         pip install 'sphinx<3.1.0' mkdocs numpy pydata_sphinx_theme
         gem install jekyll jekyll-redirect-from rouge
         sudo Rscript -e "install.packages(c('devtools', 'testthat', 'knitr', 'rmarkdown', 'roxygen2'), repos='https://cloud.r-project.org/')"
-        echo "::add-path::/usr/local/bin
-    - name: Install dependencies for documentation generation
-      run: |
-        Rscript -e 'print(version)'
-        ls /usr/local/bin
     - name: Scala linter
       run: ./dev/lint-scala
     - name: Java linter
