@@ -43,7 +43,7 @@ jobs:
         r-version: 3.6
     - name: Install R linter dependencies and SparkR
       run: |
-        echo "::add-path::/usr/local/bin
+        echo "::add-path::/usr/local/bin"
     - name: Install dependencies for documentation generation
       run: |
         Rscript -e 'print(version)'
