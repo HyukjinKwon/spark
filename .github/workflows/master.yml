@@ -38,11 +38,9 @@ jobs:
         #   See also https://github.com/sphinx-doc/sphinx/issues/7551.
         pip3 install flake8 'sphinx<3.1.0' numpy pydata_sphinx_theme
     - name: Install R 3.6
-      run: |
-        echo 'deb https://cloud.r-project.org/bin/linux/ubuntu bionic-cran36/' | sudo tee -a /etc/apt/sources.list
-        curl -sL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0xE298A3A825C0D65DFD57CBB651716619E084DAB9" | sudo apt-key add
-        sudo apt-get update
-        sudo apt-get install -y r-base r-base-dev libcurl4-openssl-dev
+      uses: r-lib/actions/setup-r@master
+      with:
+        r-version: 3.6
     - name: Install R linter dependencies and SparkR
       run: |
         Rscript -e 'print(version)'
