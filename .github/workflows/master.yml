@@ -38,7 +38,7 @@ jobs:
         #   See also https://github.com/sphinx-doc/sphinx/issues/7551.
         pip3 install flake8 'sphinx<3.1.0' numpy pydata_sphinx_theme
     - name: Install R 3.6
-      uses: r-lib/actions/setup-r@v1
+      uses: r-lib/actions/setup-r@master
       with:
         r-version: 3.6
     - name: Install R linter dependencies and SparkR
