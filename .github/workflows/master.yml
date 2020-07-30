@@ -46,6 +46,7 @@ jobs:
         sudo apt-get install -y libcurl4-openssl-dev
         sudo Rscript -e "install.packages(c('devtools'), repos='https://cloud.r-project.org/')"
         sudo Rscript -e "devtools::install_github('jimhester/lintr@v2.0.0')"
+        Rscript -e 'print(version)'
         ./R/install-dev.sh
     - name: Install Ruby 2.7 for documentation generation
       uses: actions/setup-ruby@v1
