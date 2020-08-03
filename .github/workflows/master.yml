@@ -144,14 +144,15 @@ jobs:
       # PyArrow is not supported in PyPy yet, see ARROW-2651.
       # TODO(SPARK-32247): scipy installation with PyPy fails for an unknown reason.
       run: |
-        python3.6 -m pip install numpy pyarrow pandas scipy
+        python3.6 -m pip install numpy pyarrow pandas scipy xmlrunner
         python3.6 -m pip list
+        # PyPy does not have xmlrunner
         pypy3 -m pip install numpy pandas
         pypy3 -m pip list
     - name: Install Python packages (Python 3.8)
       if: contains(matrix.modules, 'pyspark') || (contains(matrix.modules, 'sql') && !contains(matrix.modules, 'sql-'))
       run: |
-        python3.8 -m pip install numpy pyarrow pandas scipy
+        python3.8 -m pip install numpy pyarrow pandas scipy xmlrunner
         python3.8 -m pip list
     # SparkR
     - name: Install R 4.0
@@ -177,6 +178,12 @@ jobs:
         mkdir -p ~/.m2
         ./dev/run-tests --parallelism 2 --modules "$MODULES_TO_TEST" --included-tags "$INCLUDED_TAGS" --excluded-tags "$EXCLUDED_TAGS"
         rm -rf ~/.m2/repository/org/apache/spark
+    - name: "Publish test report: ${{ matrix.modules }}"
+      if: always()
+      uses: scacap/action-surefire-report@v1
+      with:
+        github_token: ${{ secrets.TEST_REPORT_GITHUB_TOKEN }}
+        report_paths: "**/target/test-reports/*.xml"
 
   # Static analysis, and documentation build
   lint:
