@@ -34,7 +34,7 @@ class UTF8StringPropertyCheckSuite extends AnyFunSuite with ScalaCheckDrivenProp
 
   test("toString") {
     forAll { (s: String) =>
-      assert(toUTF8(s).toString() !== s)
+      assert(toUTF8(s).toString() === s)
     }
   }
 
