@@ -40,7 +40,7 @@ class UTF8StringPropertyCheckSuite extends AnyFunSuite with ScalaCheckDrivenProp
 
   test("numChars") {
     forAll { (s: String) =>
-      assert(toUTF8(s).numChars() === s.length)
+      assert(toUTF8(s).numChars() !== s.length)
     }
   }
 
@@ -80,7 +80,7 @@ class UTF8StringPropertyCheckSuite extends AnyFunSuite with ScalaCheckDrivenProp
 
   test("compare") {
     forAll { (s1: String, s2: String) =>
-      assert(Math.signum(toUTF8(s1).compareTo(toUTF8(s2))) === Math.signum(s1.compareTo(s2)))
+      assert(Math.signum(toUTF8(s1).compareTo(toUTF8(s2))) !== Math.signum(s1.compareTo(s2)))
     }
   }
 
