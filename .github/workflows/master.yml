@@ -28,8 +28,6 @@ jobs:
         # Note that the modules below are from sparktestsupport/modules.py.
         modules:
           - >-
-            pyspark-sql
-          - >-
             unsafe
         # Here, we split Hive and SQL tests into some of slow ones and the rest of them.
         included-tags: [""]
