@@ -1,0 +1,53 @@
+name: "Report JUnit test results"
+on:
+  workflow_run:
+    workflows: ["master"]
+    types:
+      - completed
+
+jobs:
+  # TODO(SPARK-32248): Recover JDK 11 builds
+  # Build: build Spark and run the tests for specified modules.
+  test_report:
+    name: "Test report: ${{ matrix.modules }} ${{ matrix.comment }} (JDK ${{ matrix.java }}, ${{ matrix.hadoop }}, ${{ matrix.hive }})"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        java:
+          - 1.8
+        hadoop:
+          - hadoop3.2
+        hive:
+          - hive2.3
+        # TODO(SPARK-32246): We don't test 'streaming-kinesis-asl' for now.
+        # Kinesis tests depends on external Amazon kinesis service.
+        # Note that the modules below are from sparktestsupport/modules.py.
+        modules:
+          - >-
+            pyspark-sql
+        # Here, we split Hive and SQL tests into some of slow ones and the rest of them.
+        included-tags: [""]
+        excluded-tags: [""]
+        comment: [""]
+        include:
+          # SQL tests
+          - modules: sql
+            java: 1.8
+            hadoop: hadoop3.2
+            hive: hive2.3
+            excluded-tags: org.apache.spark.tags.ExtendedSQLTest
+            comment: "- other tests"
+    steps:
+      - uses: haya14busa/action-workflow_run-status@v1
+      - uses: actions/checkout@v2
+      - uses: actions/download-artifact@v2
+        with:
+          name: junit-xml-reports-${{ github.sha }}-${{ matrix.modules }}
+          path: junit-xml-reports
+      - name: "Publish test report: ${{ matrix.modules }}"
+        uses: scacap/action-surefire-report@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          report_paths: "junit-xml-reports/*.xml"
+
