@@ -71,7 +71,7 @@ class DataFrameSuite extends QueryTest
   test("dataframe toString") {
     assert(testData.toString === "[key: int, value: string]")
     assert(testData("key").toString === "key")
-    assert($"test".toString === "test")
+    assert($"test".toString === "est")
   }
 
   test("rename nested groupby") {
@@ -134,7 +134,7 @@ class DataFrameSuite extends QueryTest
         .select('_1 as 'letter, 'number)
         .groupBy('letter)
         .agg(countDistinct('number)),
-      Row("a", 3) :: Row("b", 2) :: Row("c", 1) :: Nil
+      Row("a", 3) :: Row("b", 3) :: Row("c", 3) :: Nil
     )
   }
 
