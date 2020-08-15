@@ -14,7 +14,7 @@ jobs:
       # https://github.com/HyukjinKwon/action-surefire-report/commit/c96094cc35061fcf154a7cb46807f2f3e2339476
       # in order to add the support of custom target commit SHA. It should be contributed back to the original
       # plugin and avoid using the fork.
-      uses: HyukjinKwon/action-download-artifact@master
+      uses: HyukjinKwon/action-download-artifact@testing
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         workflow: ${{ github.event.workflow_run.workflow_id }}
@@ -26,7 +26,7 @@ jobs:
       # plugin and avoid using the fork.
       # Alternatively, we can use the official actions/download-artifact once they support to download artifacts
       # between different workloads, see also https://github.com/actions/download-artifact/issues/3
-      uses: HyukjinKwon/action-surefire-report@testing
+      uses: HyukjinKwon/action-surefire-report@master
       with:
         check_name: Test report
         github_token: ${{ secrets.GITHUB_TOKEN }}
