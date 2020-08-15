@@ -9,6 +9,8 @@ jobs:
   test_report:
     runs-on: ubuntu-latest
     steps:
+    - name: Checkout Spark repository
+      uses: actions/checkout@v2
     - name: Download test results to report
       # TODO(SPARK-32605): It was forked to have a custom fix
       # https://github.com/HyukjinKwon/action-surefire-report/commit/c96094cc35061fcf154a7cb46807f2f3e2339476
@@ -16,6 +18,7 @@ jobs:
       # plugin and avoid using the fork.
       uses: HyukjinKwon/action-download-artifact@testing
       with:
+        path: downloaded_test_reports
         github_token: ${{ secrets.GITHUB_TOKEN }}
         workflow: ${{ github.event.workflow_run.workflow_id }}
         commit: ${{ github.event.workflow_run.head_commit.id }}
@@ -30,6 +33,6 @@ jobs:
       with:
         check_name: Test report
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        report_paths: "**/target/test-reports/*.xml"
+        report_paths: "downloaded_test_reports/**/target/test-reports/*.xml"
         commit: ${{ github.event.workflow_run.head_commit.id }}
 
