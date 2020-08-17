@@ -68,8 +68,9 @@ if (identical(Sys.getenv("NOT_CRAN"), "true")) {
 
     } else {
       # testthat >= 2.0.0
+      options(testthat.output_file = "target/test-reports/test-results.xml")
       test_runner <- testthat:::test_package_dir
-      reporter <- testthat::default_reporter()
+      reporter <- "junit"
     }
 
     test_runner("SparkR",
