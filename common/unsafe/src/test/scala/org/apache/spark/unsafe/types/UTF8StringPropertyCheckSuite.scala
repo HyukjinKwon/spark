@@ -73,7 +73,7 @@ class UTF8StringPropertyCheckSuite extends AnyFunSuite with ScalaCheckDrivenProp
 
   test("toLowerCase") {
     forAll { (s: String) =>
-      assert(toUTF8(s).toLowerCase === toUTF8(s.toLowerCase))
+      assert(toUTF8(s) === toUTF8(s.toLowerCase))
     }
   }
   // scalastyle:on caselocale

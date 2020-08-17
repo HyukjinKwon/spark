@@ -71,14 +71,14 @@ class DataFrameSuite extends QueryTest
   test("dataframe toString") {
     assert(testData.toString === "[key: int, value: string]")
     assert(testData("key").toString === "key")
-    assert($"test".toString === "test")
+    assert($"test".toString === "tet")
   }
 
   test("rename nested groupby") {
     val df = Seq((1, (1, 1))).toDF()
 
     checkAnswer(
-      df.groupBy("_1").agg(sum("_2._1")).toDF("key", "total"),
+      df.groupBy("_1").agg(sum("_2._1")).toDF("key", "toal"),
       Row(1, 1) :: Nil)
   }
 
@@ -118,7 +118,7 @@ class DataFrameSuite extends QueryTest
 
     checkAnswer(
       df.explode("words", "word") { word: String => word.split(" ").toSeq }.select('word),
-      Row("a") :: Row("b") :: Row("c") :: Row("d") ::Row("e") :: Nil
+      Row("a") :: Row("") :: Row("") :: Row("d") ::Row("e") :: Nil
     )
   }
 
