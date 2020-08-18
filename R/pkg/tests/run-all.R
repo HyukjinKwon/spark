@@ -68,6 +68,7 @@ if (identical(Sys.getenv("NOT_CRAN"), "true")) {
     } else {
       # testthat >= 2.0.0
       test_runner <- testthat:::test_package_dir
+      dir.create("target/test-reports", showWarnings = FALSE)
       reporter <- MultiReporter$new(list(
         SummaryReporter$new(),
         JunitReporter$new(file = "target/test-reports/test-results.xml")
