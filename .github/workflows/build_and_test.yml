@@ -142,6 +142,8 @@ jobs:
     # Run the tests.
     - name: Run tests
       run: |
+        which python
+        python --version
         # Hive tests become flaky when running in parallel as it's too intensive.
         if [[ "$MODULES_TO_TEST" == "hive" ]]; then export SERIAL_SBT_TESTS=1; fi
         mkdir -p ~/.m2
