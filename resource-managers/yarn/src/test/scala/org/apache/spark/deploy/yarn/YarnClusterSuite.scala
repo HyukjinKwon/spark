@@ -162,7 +162,7 @@ class YarnClusterSuite extends BaseYarnClusterSuite {
   }
 
   test("run Python application in yarn-client mode") {
-    testPySpark(true)
+    testPySpark(true, extraConf = Map("spark.executorEnv.PATH" -> sys.env("PATH")))
   }
 
   test("run Python application in yarn-cluster mode") {
@@ -297,9 +297,7 @@ class YarnClusterSuite extends BaseYarnClusterSuite {
       sparkArgs = Seq("--py-files" -> pyFiles),
       appArgs = Seq(result.getAbsolutePath()),
       extraEnv = extraEnvVars,
-      // Explicitly pass the paths so the same Python executables are used.
-      extraConf = extraConf ++ Map(
-        "spark.executorEnv.PATH" -> sys.env("PATH"), "spark.driverEnv.PATH" -> sys.env("PATH")),
+      extraConf = extraConf,
       outFile = outFile)
     checkResult(finalState, result, outFile = outFile)
   }
