@@ -274,7 +274,6 @@ class YarnClusterSuite extends BaseYarnClusterSuite {
         s"$sparkHome/python/lib/${PythonUtils.PY4J_ZIP_NAME}",
         s"$sparkHome/python")
     val extraEnvVars = Map(
-      "PATH" -> sys.env("PATH"),
       "PYSPARK_ARCHIVES_PATH" -> pythonPath.map("local:" + _).mkString(File.pathSeparator),
       "PYTHONPATH" -> pythonPath.mkString(File.pathSeparator),
       "PYSPARK_DRIVER_PYTHON" -> "python3",
