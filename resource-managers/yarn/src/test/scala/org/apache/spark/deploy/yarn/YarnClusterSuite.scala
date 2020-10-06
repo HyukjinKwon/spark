@@ -297,6 +297,7 @@ class YarnClusterSuite extends BaseYarnClusterSuite {
       sparkArgs = Seq("--py-files" -> pyFiles),
       appArgs = Seq(result.getAbsolutePath()),
       extraEnv = extraEnvVars,
+      // Explicitly pass the paths so the same Python executables are used.
       extraConf = extraConf ++ Map(
         "spark.executorEnv.PATH" -> sys.env("PATH"), "spark.driverEnv.PATH" -> sys.env("PATH")),
       outFile = outFile)
