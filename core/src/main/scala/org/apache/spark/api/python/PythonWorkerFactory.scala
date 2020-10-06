@@ -157,7 +157,6 @@ private[spark] class PythonWorkerFactory(pythonExec: String, envVars: Map[String
       val pb = new ProcessBuilder(Arrays.asList(pythonExec, "-m", workerModule))
       val workerEnv = pb.environment()
       workerEnv.putAll(envVars.asJava)
-      throw new Exception(workerEnv.asScala.mkString("\n"))
       workerEnv.put("PYTHONPATH", pythonPath)
       // This is equivalent to setting the -u flag; we use it because ipython doesn't support -u:
       workerEnv.put("PYTHONUNBUFFERED", "YES")
