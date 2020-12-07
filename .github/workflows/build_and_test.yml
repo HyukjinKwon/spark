@@ -93,16 +93,14 @@ jobs:
       if: ${{ github.event.inputs.target != '' }}
       run: git merge --progress --ff-only origin/${{ github.event.inputs.target }}
     # Cache local repositories. Note that GitHub Actions cache has a 2G limit.
-    - name: Cache Scala, SBT, Maven and Zinc
+    - name: Cache Scala, Maven and Zinc
       uses: actions/cache@v2
       with:
         path: |
           build/apache-maven-*
           build/zinc-*
           build/scala-*
-          build/*.jar
-          ~/.sbt
-        key: build-${{ hashFiles('**/pom.xml', 'project/build.properties', 'build/mvn', 'build/sbt', 'build/sbt-launch-lib.bash', 'build/spark-build-info') }}
+        key: build-${{ hashFiles('**/pom.xml', 'build/mvn') }}
         restore-keys: |
           build-
     - name: Cache Coursier local repository
