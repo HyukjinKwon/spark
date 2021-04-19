@@ -83,7 +83,7 @@ jobs:
                 \`\`\`bash
                 git fetch upstream
                 git rebase upstream/master
-                git push origin YOUR_BRANCH --foce
+                git push origin YOUR_BRANCH --force
                 \`\`\``
                 }
               })
