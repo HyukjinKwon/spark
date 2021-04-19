@@ -106,6 +106,8 @@ jobs:
                 head_sha: head_sha,
                 status: status,
                 output: {
+                  title: 'Test results',
+                  summary: runUrl,
                   text: JSON.stringify({
                     owner: context.payload.pull_request.head.repo.owner.login,
                     repo: context.payload.pull_request.head.repo.name,
