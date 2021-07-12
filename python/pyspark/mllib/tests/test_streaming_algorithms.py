@@ -117,7 +117,7 @@ class StreamingKMeansTest(MLLibStreamingTestCase):
             self.assertTrue(all(finalModel.centers == array(initCenters)))
             self.assertEqual(finalModel.clusterWeights, [5.0, 5.0, 5.0, 5.0])
             return True
-        eventually(condition, catch_assertions=True)
+        eventually(condition, 90, catch_assertions=True)
 
     def test_predictOn_model(self):
         """Test that the model predicts correctly on toy data."""
@@ -251,7 +251,7 @@ class StreamingLogisticRegressionWithSGDTests(MLLibStreamingTestCase):
             return True
 
         # We want all batches to finish for this test.
-        eventually(condition, 60.0, catch_assertions=True)
+        eventually(condition, 120, catch_assertions=True)
 
         t_models = array(models)
         diff = t_models[1:] - t_models[:-1]
@@ -388,7 +388,7 @@ class StreamingLinearRegressionWithTests(MLLibStreamingTestCase):
             return True
 
         # We want all batches to finish for this test.
-        eventually(condition, catch_assertions=True)
+        eventually(condition, 90, catch_assertions=True)
 
         w = array(model_weights)
         diff = w[1:] - w[:-1]
@@ -462,7 +462,7 @@ class StreamingLinearRegressionWithTests(MLLibStreamingTestCase):
                 return True
             return "Latest errors: " + ", ".join(map(lambda x: str(x), errors))
 
-        eventually(condition, timeout=180.0)
+        eventually(condition, timeout=900)
 
 
 if __name__ == "__main__":

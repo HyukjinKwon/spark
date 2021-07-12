@@ -171,6 +171,7 @@ jobs:
       HIVE_PROFILE: hive2.3
       GITHUB_PREV_SHA: ${{ github.event.before }}
       SPARK_LOCAL_IP: localhost
+      PYSPARK_CODECOV: ${{ github.repository != 'apache/spark' }}
     steps:
     - name: Checkout Spark repository
       uses: actions/checkout@v2
@@ -219,7 +220,18 @@ jobs:
       run: |
         export APACHE_SPARK_REF=${{ steps.sync-branch.outputs.APACHE_SPARK_REF }}
         export PATH=$PATH:$HOME/miniconda/bin
+        # TODO(SPARK-XXXXX): pip install coverage in Python3.9 and PyPy.
+        python3.9 -m pip install coverage
+        pypy3 -m pip install coverage
         ./dev/run-tests --parallelism 2 --modules "$MODULES_TO_TEST"
+        # Convert into XML format for reporting
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v1
+      # if: github.repository == 'apache/spark'
+      with:
+        files: ./python/coverage.xml
+        flags: unittests
+        name: PySpark
     - name: Upload test results to report
       if: always()
       uses: actions/upload-artifact@v2
