@@ -23,7 +23,7 @@ import functools
 import inspect
 import sys
 import warnings
-from typing import Callable, Any, TYPE_CHECKING, Optional, cast, Union
+from typing import Callable, Any, TYPE_CHECKING, Optional, cast, Union, Iterable
 
 from py4j.java_gateway import JavaObject
 
@@ -50,7 +50,10 @@ __all__ = ["UDFRegistration"]
 
 
 def _wrap_function(
-    sc: SparkContext, func: Callable[..., Any], returnType: Optional[DataType] = None
+    sc: SparkContext,
+    func: Callable[..., Any],
+    returnType: Optional[DataType] = None,
+    pythonExec: Optional[str] = None,
 ) -> JavaObject:
     command: Any
     if returnType is None:
@@ -63,7 +66,7 @@ def _wrap_function(
         bytearray(pickled_command),
         env,
         includes,
-        sc.pythonExec,
+        pythonExec if pythonExec else sc.pythonExec,
         sc.pythonVer,
         broadcast_vars,
         sc._javaAccumulator,
@@ -76,11 +79,17 @@ def _create_udf(
     evalType: int,
     name: Optional[str] = None,
     deterministic: bool = True,
+    packages: Iterable[str] = (),
 ) -> "UserDefinedFunctionLike":
     """Create a regular(non-Arrow-optimized) Python UDF."""
     # Set the name of the UserDefinedFunction object to be the name of function f
     udf_obj = UserDefinedFunction(
-        f, returnType=returnType, name=name, evalType=evalType, deterministic=deterministic
+        f,
+        returnType=returnType,
+        name=name,
+        evalType=evalType,
+        deterministic=deterministic,
+        packages=packages,
     )
     return udf_obj._wrapped()
 
@@ -89,6 +98,7 @@ def _create_py_udf(
     f: Callable[..., Any],
     returnType: "DataTypeOrString",
     useArrow: Optional[bool] = None,
+    packages: Iterable[str] = (),
 ) -> "UserDefinedFunctionLike":
     """Create a regular/Arrow-optimized Python UDF."""
     # The following table shows the results when the type coercion in Arrow is needed, that is,
@@ -147,7 +157,7 @@ def _create_py_udf(
                 UserWarning,
             )
 
-    return _create_udf(f, returnType, eval_type)
+    return _create_udf(f, returnType, eval_type, packages=packages)
 
 
 class UserDefinedFunction:
@@ -170,6 +180,7 @@ class UserDefinedFunction:
         name: Optional[str] = None,
         evalType: int = PythonEvalType.SQL_BATCHED_UDF,
         deterministic: bool = True,
+        packages: Iterable[str] = (),
     ):
         if not callable(func):
             raise PySparkTypeError(
@@ -202,6 +213,7 @@ class UserDefinedFunction:
         )
         self.evalType = evalType
         self.deterministic = deterministic
+        self._packages = packages
 
     @property
     def returnType(self) -> DataType:
@@ -328,7 +340,22 @@ class UserDefinedFunction:
         spark = SparkSession._getActiveSessionOrCreate()
         sc = spark.sparkContext
 
-        wrapped_func = _wrap_function(sc, func, self.returnType)
+        if self._packages:
+            import subprocess
+            import os
+
+            env_id = self._name
+            # If the pex already exists, just reuse them.
+            if not os.path.exists(f"{env_id}.pex"):
+                subprocess.call(
+                    ["pex"]
+                    + list(self._packages)
+                    + ["-o", f"{env_id}.pex", "--inherit-path=fallback"]
+                )
+                spark.sparkContext.addFile(f"{env_id}.pex")
+            wrapped_func = _wrap_function(sc, func, self.returnType, f"./{env_id}.pex")
+        else:
+            wrapped_func = _wrap_function(sc, func, self.returnType)
         jdt = spark._jsparkSession.parseDataType(self.returnType.json())
         assert sc._jvm is not None
         judf = sc._jvm.org.apache.spark.sql.execution.python.UserDefinedPythonFunction(
