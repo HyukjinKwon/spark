@@ -17,13 +17,17 @@
 """
 User-defined function related classes and functions
 """
+import shutil
+import tempfile
 from inspect import getfullargspec
-
+import os
 import functools
 import inspect
 import sys
 import warnings
-from typing import Callable, Any, TYPE_CHECKING, Optional, cast, Union, Iterable
+from typing import Callable, Any, TYPE_CHECKING, Optional, cast, Union, Iterable, List
+import hashlib
+import atexit
 
 from py4j.java_gateway import JavaObject
 
@@ -40,7 +44,7 @@ from pyspark.sql.types import (
 from pyspark.sql.utils import get_active_spark_context
 from pyspark.sql.pandas.types import to_arrow_type
 from pyspark.sql.pandas.utils import require_minimum_pandas_version, require_minimum_pyarrow_version
-from pyspark.errors import PySparkTypeError, PySparkNotImplementedError
+from pyspark.errors import PySparkTypeError, PySparkNotImplementedError, SparkRuntimeException
 
 if TYPE_CHECKING:
     from pyspark.sql._typing import DataTypeOrString, ColumnOrName, UserDefinedFunctionLike
@@ -49,11 +53,15 @@ if TYPE_CHECKING:
 __all__ = ["UDFRegistration"]
 
 
+_temp_root_package_directory = tempfile.mkdtemp(prefix="pyspark-packaging")
+atexit.register(lambda: shutil.rmtree(_temp_root_package_directory, ignore_errors=True))
+
+
 def _wrap_function(
     sc: SparkContext,
     func: Callable[..., Any],
     returnType: Optional[DataType] = None,
-    pythonExec: Optional[str] = None,
+    packages: Optional[List[str]] = None,
 ) -> JavaObject:
     command: Any
     if returnType is None:
@@ -61,12 +69,42 @@ def _wrap_function(
     else:
         command = (func, returnType)
     pickled_command, broadcast_vars, env, includes = _prepare_for_python_RDD(sc, command)
+
+    try:
+        from pex.bin import pex
+    except ImportError:
+        raise ImportError("PEX is required for the UDF-level package support.")
+
+    if packages:
+        env_id = hashlib.sha256(pickled_command)
+        # If the pex already exists, just reuse them.
+        if not os.path.exists(f"{_temp_root_package_directory}{os.sep}{env_id}.pex"):
+            try:
+                pex.main(
+                    ["pex"]
+                    + list(packages)
+                    + [
+                        "-o",
+                        f"{_temp_root_package_directory}{os.sep}{env_id}.pex",
+                        "--inherit-path=fallback",
+                    ]
+                )
+            except SystemExit as e:
+                if e.code:
+                    raise SparkRuntimeException(
+                        error_class="PEX_PACKAGING_FAILED", message_parameters={}
+                    )
+            sc.addFile(f"{_temp_root_package_directory}{os.sep}{env_id}.pex")
+        pythonExec = f"{env_id}.pex"
+    else:
+        pythonExec = sc.pythonExec
+
     assert sc._jvm is not None
     return sc._jvm.SimplePythonFunction(
         bytearray(pickled_command),
         env,
         includes,
-        pythonExec if pythonExec else sc.pythonExec,
+        pythonExec,
         sc.pythonVer,
         broadcast_vars,
         sc._javaAccumulator,
@@ -340,22 +378,7 @@ class UserDefinedFunction:
         spark = SparkSession._getActiveSessionOrCreate()
         sc = spark.sparkContext
 
-        if self._packages:
-            import subprocess
-            import os
-
-            env_id = self._name
-            # If the pex already exists, just reuse them.
-            if not os.path.exists(f"{env_id}.pex"):
-                subprocess.call(
-                    ["pex"]
-                    + list(self._packages)
-                    + ["-o", f"{env_id}.pex", "--inherit-path=fallback"]
-                )
-                spark.sparkContext.addFile(f"{env_id}.pex")
-            wrapped_func = _wrap_function(sc, func, self.returnType, f"./{env_id}.pex")
-        else:
-            wrapped_func = _wrap_function(sc, func, self.returnType)
+        wrapped_func = _wrap_function(sc, func, self.returnType, self._packages)
         jdt = spark._jsparkSession.parseDataType(self.returnType.json())
         assert sc._jvm is not None
         judf = sc._jvm.org.apache.spark.sql.execution.python.UserDefinedPythonFunction(

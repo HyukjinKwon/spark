@@ -667,6 +667,11 @@ ERROR_CLASSES_JSON = """
       "Only a single trigger is allowed."
     ]
   },
+  "PEX_PACKAGING_FAILED" : {
+    "message" : [
+      "PEX packaging failed."
+    ]
+  },
   "PIPE_FUNCTION_EXITED" : {
     "message" : [
       "Pipe function `<func_name>` exited with error code <error_code>."
