@@ -162,6 +162,16 @@ Package                    Supported version Note
 `grpcio`                   >=1.62.0                  Required for Spark Connect
 `grpcio-status`            >=1.62.0                  Required for Spark Connect
 `googleapis-common-protos` >=1.56.4                  Required for Spark Connect
+`memory-profiler`          >=0.61.0                  Optional fof Spark SQL and Spark Connect
+mlflow                     >=2.3.1                   Optional for pandas API on Spark and Spark Connect
+matplotlib                                           Optional for pandas API on Spark and Spark Connect
+plotly                                               Optional for pandas API on Spark and Spark Connect
+`scikit-learn`                                       Optional for MLLib DataFrame-based API and Spark Connect
+`scipy`                                              Optional for MLLib DataFrame-based API and Spark Connect
+`torch`                                              Optional for MLLib DataFrame-based API and Spark Connect
+`torchvision`                                        Optional for MLLib DataFrame-based API and Spark Connect
+`torcheval`                                          Optional for MLLib DataFrame-based API and Spark Connect
+`deepspeed`                                          Optional for MLLib DataFrame-based API and Spark Connect
 ========================== ========================= ======================================================================================
 
 Note that PySpark requires Java 17 or later with ``JAVA_HOME`` properly set and refer to |downloading|_.
