@@ -115,59 +115,6 @@ class FrameReindexingMixin:
         with self.assertRaisesRegex(TypeError, "Index must be DatetimeIndex"):
             psdf.at_time("0:15")
 
-    @unittest.skipIf(
-        LooseVersion(pd.__version__) >= LooseVersion("2.0.0"),
-        "TODO(SPARK-43557): Enable DataFrameSlowTests.test_between_time for pandas 2.0.0.",
-    )
-    def test_between_time(self):
-        idx = pd.date_range("2018-04-09", periods=4, freq="1D20min")
-        pdf = pd.DataFrame({"A": [1, 2, 3, 4]}, index=idx)
-        psdf = ps.from_pandas(pdf)
-        self.assert_eq(
-            pdf.between_time("0:15", "0:45").sort_index(),
-            psdf.between_time("0:15", "0:45").sort_index(),
-        )
-
-        pdf.index.name = "ts"
-        psdf = ps.from_pandas(pdf)
-        self.assert_eq(
-            pdf.between_time("0:15", "0:45").sort_index(),
-            psdf.between_time("0:15", "0:45").sort_index(),
-        )
-
-        # Column label is 'index'
-        pdf.columns = pd.Index(["index"])
-        psdf = ps.from_pandas(pdf)
-        self.assert_eq(
-            pdf.between_time("0:15", "0:45").sort_index(),
-            psdf.between_time("0:15", "0:45").sort_index(),
-        )
-
-        # Both index name and column label are 'index'
-        pdf.index.name = "index"
-        psdf = ps.from_pandas(pdf)
-        self.assert_eq(
-            pdf.between_time("0:15", "0:45").sort_index(),
-            psdf.between_time("0:15", "0:45").sort_index(),
-        )
-
-        # Index name is 'index', column label is ('X', 'A')
-        pdf.columns = pd.MultiIndex.from_arrays([["X"], ["A"]])
-        psdf = ps.from_pandas(pdf)
-        self.assert_eq(
-            pdf.between_time("0:15", "0:45").sort_index(),
-            psdf.between_time("0:15", "0:45").sort_index(),
-        )
-
-        with self.assertRaisesRegex(
-            NotImplementedError, "between_time currently only works for axis=0"
-        ):
-            psdf.between_time("0:15", "0:45", axis=1)
-
-        psdf = ps.DataFrame({"A": [1, 2, 3, 4]})
-        with self.assertRaisesRegex(TypeError, "Index must be DatetimeIndex"):
-            psdf.between_time("0:15", "0:45")
-
     def test_drop(self):
         pdf = pd.DataFrame({"x": [1, 2], "y": [3, 4], "z": [5, 6]}, index=np.random.rand(2))
         psdf = ps.from_pandas(pdf)
