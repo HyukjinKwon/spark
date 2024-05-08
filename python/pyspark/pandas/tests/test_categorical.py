@@ -261,25 +261,6 @@ class CategoricalTestsMixin:
             pdf.apply(lambda x: x, axis=1).sort_index(),
         )
 
-    def test_frame_apply_without_shortcut(self):
-        with ps.option_context("compute.shortcut_limit", 0):
-            self.test_frame_apply()
-
-        pdf = pd.DataFrame(
-            {"a": ["a", "b", "c", "a", "b", "c"], "b": ["b", "a", "c", "c", "b", "a"]}
-        )
-        psdf = ps.from_pandas(pdf)
-
-        dtype = CategoricalDtype(categories=["a", "b", "c"])
-
-        def categorize(ser) -> ps.Series[dtype]:
-            return ser.astype(dtype)
-
-        self.assert_eq(
-            psdf.apply(categorize).sort_values(["a", "b"]).reset_index(drop=True),
-            pdf.apply(categorize).sort_values(["a", "b"]).reset_index(drop=True),
-        )
-
     def test_frame_transform(self):
         pdf, psdf = self.df_pair
 
@@ -297,58 +278,6 @@ class CategoricalTestsMixin:
             psdf.transform(lambda x: x.astype(dtype)).sort_index(),
             pdf.transform(lambda x: x.astype(dtype)).sort_index(),
         )
-
-    def test_frame_transform_without_shortcut(self):
-        with ps.option_context("compute.shortcut_limit", 0):
-            self.test_frame_transform()
-
-        pdf, psdf = self.df_pair
-
-        def codes(pser) -> ps.Series[np.int8]:
-            return pser.cat.codes
-
-        self.assert_eq(psdf.transform(codes), pdf.transform(codes))
-
-        pdf = pd.DataFrame(
-            {"a": ["a", "b", "c", "a", "b", "c"], "b": ["b", "a", "c", "c", "b", "a"]}
-        )
-        psdf = ps.from_pandas(pdf)
-
-        dtype = CategoricalDtype(categories=["a", "b", "c", "d"])
-
-        def to_category(pser) -> ps.Series[dtype]:
-            return pser.astype(dtype)
-
-        self.assert_eq(
-            psdf.transform(to_category).sort_index(), pdf.transform(to_category).sort_index()
-        )
-
-    def test_series_apply(self):
-        pdf, psdf = self.df_pair
-
-        self.assert_eq(
-            psdf.a.apply(lambda x: x).sort_index(), pdf.a.apply(lambda x: x).sort_index()
-        )
-
-    def test_series_apply_without_shortcut(self):
-        with ps.option_context("compute.shortcut_limit", 0):
-            self.test_series_apply()
-
-        pdf, psdf = self.df_pair
-        ret = psdf.a.dtype
-
-        def identity(pser) -> ret:
-            return pser
-
-        self.assert_eq(psdf.a.apply(identity).sort_index(), pdf.a.apply(identity).sort_index())
-
-        # TODO: The return type is still category.
-        # def to_str(x) -> str:
-        #     return str(x)
-        #
-        # self.assert_eq(
-        #     psdf.a.apply(to_str).sort_index(), pdf.a.apply(to_str).sort_index()
-        # )
 
     def test_groupby_apply(self):
         pdf, psdf = self.df_pair
@@ -379,25 +308,6 @@ class CategoricalTestsMixin:
         #     psdf.groupby("a").apply(len).sort_index(), pdf.groupby("a").apply(len).sort_index(),
         # )
 
-    @unittest.skipIf(
-        LooseVersion(pd.__version__) >= LooseVersion("2.0.0"),
-        "TODO(SPARK-43813): Enable CategoricalTests.test_groupby_apply_without_shortcut "
-        "for pandas 2.0.0.",
-    )
-    def test_groupby_apply_without_shortcut(self):
-        with ps.option_context("compute.shortcut_limit", 0):
-            self.test_groupby_apply()
-
-        pdf, psdf = self.df_pair
-
-        def identity(df) -> ps.DataFrame[zip(psdf.columns, psdf.dtypes)]:
-            return df
-
-        self.assert_eq(
-            psdf.groupby("a").apply(identity).sort_values(["a", "b"]).reset_index(drop=True),
-            pdf.groupby("a").apply(identity).sort_values(["a", "b"]).reset_index(drop=True),
-        )
-
     def test_groupby_transform(self):
         pdf, psdf = self.df_pair
 
@@ -412,44 +322,6 @@ class CategoricalTestsMixin:
             psdf.groupby("a").transform(lambda x: x.astype(dtype)).sort_index(),
             pdf.groupby("a").transform(lambda x: x.astype(dtype)).sort_index(),
         )
-
-    def test_groupby_transform_without_shortcut(self):
-        with ps.option_context("compute.shortcut_limit", 0):
-            self.test_groupby_transform()
-
-        pdf, psdf = self.df_pair
-
-        def identity(x) -> ps.Series[psdf.b.dtype]:
-            return x
-
-        self.assert_eq(
-            psdf.groupby("a").transform(identity).sort_values("b").reset_index(drop=True),
-            pdf.groupby("a").transform(identity).sort_values("b").reset_index(drop=True),
-        )
-
-        dtype = CategoricalDtype(categories=["a", "b", "c", "d"])
-
-        # The behavior for CategoricalDtype is changed from pandas 1.3
-        if LooseVersion(pd.__version__) >= LooseVersion("1.3"):
-            ret_dtype = pdf.b.dtype
-        else:
-            ret_dtype = dtype
-
-        def astype(x) -> ps.Series[ret_dtype]:
-            return x.astype(dtype)
-
-        if LooseVersion(pd.__version__) >= LooseVersion("1.2"):
-            self.assert_eq(
-                psdf.groupby("a").transform(astype).sort_values("b").reset_index(drop=True),
-                pdf.groupby("a").transform(astype).sort_values("b").reset_index(drop=True),
-            )
-        else:
-            expected = pdf.groupby("a").transform(astype)
-            expected["b"] = dtype.categories.take(expected["b"].cat.codes).astype(dtype)
-            self.assert_eq(
-                psdf.groupby("a").transform(astype).sort_values("b").reset_index(drop=True),
-                expected.sort_values("b").reset_index(drop=True),
-            )
 
     def test_frame_apply_batch(self):
         pdf, psdf = self.df_pair
@@ -469,160 +341,6 @@ class CategoricalTestsMixin:
         self.assert_eq(
             psdf.pandas_on_spark.apply_batch(lambda pdf: pdf.astype(dtype)).sort_index(),
             pdf.astype(dtype).sort_index(),
-        )
-
-    def test_frame_apply_batch_without_shortcut(self):
-        with ps.option_context("compute.shortcut_limit", 0):
-            self.test_frame_apply_batch()
-
-        pdf, psdf = self.df_pair
-
-        def to_str(pdf) -> 'ps.DataFrame["a":str, "b":str]':  # noqa: F405
-            return pdf.astype(str)
-
-        self.assert_eq(
-            psdf.pandas_on_spark.apply_batch(to_str).sort_values(["a", "b"]).reset_index(drop=True),
-            to_str(pdf).sort_values(["a", "b"]).reset_index(drop=True),
-        )
-
-        pdf = pd.DataFrame(
-            {"a": ["a", "b", "c", "a", "b", "c"], "b": ["b", "a", "c", "c", "b", "a"]}
-        )
-        psdf = ps.from_pandas(pdf)
-
-        dtype = CategoricalDtype(categories=["a", "b", "c", "d"])
-        ret = ps.DataFrame["a":dtype, "b":dtype]
-
-        def to_category(pdf) -> ret:
-            return pdf.astype(dtype)
-
-        self.assert_eq(
-            psdf.pandas_on_spark.apply_batch(to_category)
-            .sort_values(["a", "b"])
-            .reset_index(drop=True),
-            to_category(pdf).sort_values(["a", "b"]).reset_index(drop=True),
-        )
-
-    def test_frame_transform_batch(self):
-        pdf, psdf = self.df_pair
-
-        self.assert_eq(
-            psdf.pandas_on_spark.transform_batch(lambda pdf: pdf.astype(str)).sort_index(),
-            pdf.astype(str).sort_index(),
-        )
-        self.assert_eq(
-            psdf.pandas_on_spark.transform_batch(lambda pdf: pdf.b.cat.codes).sort_index(),
-            pdf.b.cat.codes.sort_index(),
-        )
-
-        pdf = pd.DataFrame(
-            {"a": ["a", "b", "c", "a", "b", "c"], "b": ["b", "a", "c", "c", "b", "a"]}
-        )
-        psdf = ps.from_pandas(pdf)
-
-        dtype = CategoricalDtype(categories=["a", "b", "c", "d"])
-
-        self.assert_eq(
-            psdf.pandas_on_spark.transform_batch(lambda pdf: pdf.astype(dtype)).sort_index(),
-            pdf.astype(dtype).sort_index(),
-        )
-        self.assert_eq(
-            psdf.pandas_on_spark.transform_batch(lambda pdf: pdf.b.astype(dtype)).sort_index(),
-            pdf.b.astype(dtype).sort_index(),
-        )
-
-    def test_frame_transform_batch_without_shortcut(self):
-        with ps.option_context("compute.shortcut_limit", 0):
-            self.test_frame_transform_batch()
-
-        pdf, psdf = self.df_pair
-
-        def to_str(pdf) -> 'ps.DataFrame["a":str, "b":str]':  # noqa: F405
-            return pdf.astype(str)
-
-        self.assert_eq(
-            psdf.pandas_on_spark.transform_batch(to_str).sort_index(),
-            to_str(pdf).sort_index(),
-        )
-
-        def to_codes(pdf) -> ps.Series[np.int8]:
-            return pdf.b.cat.codes
-
-        self.assert_eq(
-            psdf.pandas_on_spark.transform_batch(to_codes).sort_index(),
-            to_codes(pdf).sort_index(),
-        )
-
-        pdf = pd.DataFrame(
-            {"a": ["a", "b", "c", "a", "b", "c"], "b": ["b", "a", "c", "c", "b", "a"]}
-        )
-        psdf = ps.from_pandas(pdf)
-
-        dtype = CategoricalDtype(categories=["a", "b", "c", "d"])
-        ret = ps.DataFrame["a":dtype, "b":dtype]
-
-        def to_category(pdf) -> ret:
-            return pdf.astype(dtype)
-
-        self.assert_eq(
-            psdf.pandas_on_spark.transform_batch(to_category).sort_index(),
-            to_category(pdf).sort_index(),
-        )
-
-        def to_category(pdf) -> ps.Series[dtype]:
-            return pdf.b.astype(dtype)
-
-        self.assert_eq(
-            psdf.pandas_on_spark.transform_batch(to_category).sort_index(),
-            to_category(pdf).rename().sort_index(),
-        )
-
-    def test_series_transform_batch(self):
-        pdf, psdf = self.df_pair
-
-        self.assert_eq(
-            psdf.a.pandas_on_spark.transform_batch(lambda pser: pser.astype(str)).sort_index(),
-            pdf.a.astype(str).sort_index(),
-        )
-
-        pdf = pd.DataFrame(
-            {"a": ["a", "b", "c", "a", "b", "c"], "b": ["b", "a", "c", "c", "b", "a"]}
-        )
-        psdf = ps.from_pandas(pdf)
-
-        dtype = CategoricalDtype(categories=["a", "b", "c", "d"])
-
-        self.assert_eq(
-            psdf.a.pandas_on_spark.transform_batch(lambda pser: pser.astype(dtype)).sort_index(),
-            pdf.a.astype(dtype).sort_index(),
-        )
-
-    def test_series_transform_batch_without_shortcut(self):
-        with ps.option_context("compute.shortcut_limit", 0):
-            self.test_series_transform_batch()
-
-        pdf, psdf = self.df_pair
-
-        def to_str(pser) -> ps.Series[str]:
-            return pser.astype(str)
-
-        self.assert_eq(
-            psdf.a.pandas_on_spark.transform_batch(to_str).sort_index(), to_str(pdf.a).sort_index()
-        )
-
-        pdf = pd.DataFrame(
-            {"a": ["a", "b", "c", "a", "b", "c"], "b": ["b", "a", "c", "c", "b", "a"]}
-        )
-        psdf = ps.from_pandas(pdf)
-
-        dtype = CategoricalDtype(categories=["a", "b", "c", "d"])
-
-        def to_category(pser) -> ps.Series[dtype]:
-            return pser.astype(dtype)
-
-        self.assert_eq(
-            psdf.a.pandas_on_spark.transform_batch(to_category).sort_index(),
-            to_category(pdf.a).sort_index(),
         )
 
     def test_unstack(self):

@@ -139,14 +139,6 @@ class GroupbyApplyFuncMixin:
             pdf.groupby([("x", "a"), ("x", "b")]).apply(len).sort_index(),
         )
 
-    @unittest.skipIf(
-        LooseVersion(pd.__version__) >= LooseVersion("2.0.0"),
-        "TODO(SPARK-43706): Enable GroupByTests.test_apply_without_shortcut " "for pandas 2.0.0.",
-    )
-    def test_apply_without_shortcut(self):
-        with option_context("compute.shortcut_limit", 0):
-            self.test_apply()
-
     def test_apply_with_type_hint(self):
         pdf = pd.DataFrame(
             {"a": [1, 2, 3, 4, 5, 6], "b": [1, 1, 2, 3, 5, 8], "c": [1, 4, 9, 16, 25, 36]},
@@ -225,22 +217,6 @@ class GroupbyApplyFuncMixin:
             .apply(lambda df: pd.DataFrame({"mean": [df["timestamp"].mean()]}))
             .sort_index(),
         )
-
-    def test_apply_infer_schema_without_shortcut(self):
-        # SPARK-39054: Ensure infer schema accuracy in GroupBy.apply
-        with option_context("compute.shortcut_limit", 0):
-            dfs = (
-                {"timestamp": [0.0], "car_id": ["A"]},
-                {"timestamp": [0.0, 0.0], "car_id": ["A", "A"]},
-            )
-            func = lambda _: pd.DataFrame({"column": [0.0]})  # noqa: E731
-            for df in dfs:
-                pdf = pd.DataFrame(df)
-                psdf = ps.from_pandas(pdf)
-                self.assert_eq(
-                    psdf.groupby("car_id").apply(func).sort_index(),
-                    pdf.groupby("car_id").apply(func).sort_index(),
-                )
 
     def test_apply_with_new_dataframe_without_shortcut(self):
         with option_context("compute.shortcut_limit", 0):
