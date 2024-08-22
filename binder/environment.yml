@@ -1,0 +1,7 @@
+name: example-environment
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - plotly
+  - pandas<2.0.0
