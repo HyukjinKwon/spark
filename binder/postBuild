@@ -37,6 +37,9 @@ else
   SPECIFIER="<="
 fi
 
+# Workaround for https://github.com/pypa/pip/issues/12431.
+# Underscores are replaced to hyphens, and pandas_on_spark does not work.
+pip install "pip<=24.0.0"
 if [[ ! $VERSION < "3.4.0" ]]; then
   pip install "pyspark[sql,ml,mllib,pandas_on_spark,connect]$SPECIFIER$VERSION"
 else
