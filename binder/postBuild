@@ -57,6 +57,7 @@ echo "export SPARK_VERSION=${SPARK_VERSION}" >> ~/.profile
 
 # Suppress warnings from Spark jobs, and UI progress bar.
 mkdir -p ~/.ipython/profile_default/startup
+source ~/.profile
 echo "from pyspark.sql import SparkSession
 SparkSession.builder.config('spark.ui.showConsoleProgress', 'false').getOrCreate().sparkContext.setLogLevel('FATAL')
 " > ~/.ipython/profile_default/startup/00-init.py
