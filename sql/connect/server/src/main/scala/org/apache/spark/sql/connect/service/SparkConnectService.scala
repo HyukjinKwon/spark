@@ -33,13 +33,12 @@ import org.apache.commons.lang3.StringUtils
 
 import org.apache.spark.{SparkContext, SparkEnv}
 import org.apache.spark.connect.proto
-import org.apache.spark.connect.proto.{AddArtifactsRequest, AddArtifactsResponse, SparkConnectServiceGrpc}
-import org.apache.spark.connect.proto.SparkConnectServiceGrpc.AsyncService
+import org.apache.spark.connect.proto.{AddArtifactsRequest, AddArtifactsResponse}
 import org.apache.spark.internal.{Logging, MDC}
 import org.apache.spark.internal.LogKeys.HOST
 import org.apache.spark.internal.config.UI.UI_ENABLED
 import org.apache.spark.scheduler.{LiveListenerBus, SparkListenerEvent}
-import org.apache.spark.sql.connect.config.Connect.{CONNECT_GRPC_BINDING_ADDRESS, CONNECT_GRPC_BINDING_PORT, CONNECT_GRPC_MARSHALLER_RECURSION_LIMIT, CONNECT_GRPC_MAX_INBOUND_MESSAGE_SIZE, CONNECT_GRPC_PORT_MAX_RETRIES}
+import org.apache.spark.sql.connect.config.Connect._
 import org.apache.spark.sql.connect.execution.ConnectProgressExecutionListener
 import org.apache.spark.sql.connect.ui.{SparkConnectServerAppStatusStore, SparkConnectServerListener, SparkConnectServerTab}
 import org.apache.spark.sql.connect.utils.ErrorUtils
@@ -54,7 +53,9 @@ import org.apache.spark.util.Utils
  * @param debug
  *   delegates debug behavior to the handlers.
  */
-class SparkConnectService(debug: Boolean) extends AsyncService with BindableService with Logging {
+class SparkConnectService(debug: Boolean)
+    extends proto.SparkConnectServiceGrpc.SparkConnectServiceImplBase
+    with Logging {
 
   /**
    * This is the main entry method for Spark Connect and all calls to execute a plan.
@@ -230,6 +231,10 @@ class SparkConnectService(debug: Boolean) extends AsyncService with BindableServ
         sessionId = request.getSessionId)
     }
   }
+}
+
+class SparkConnectBindableService(sparkConnectService: SparkConnectService)
+    extends BindableService {
 
   private def methodWithCustomMarshallers(
       methodDesc: MethodDescriptor[Message, Message]): MethodDescriptor[Message, Message] = {
@@ -255,7 +260,7 @@ class SparkConnectService(debug: Boolean) extends AsyncService with BindableServ
 
   override def bindService(): ServerServiceDefinition = {
     // First, get the SparkConnectService ServerServiceDefinition.
-    val serviceDef = SparkConnectServiceGrpc.bindService(this)
+    val serviceDef = sparkConnectService.bindService()
 
     // Create a new ServerServiceDefinition builder
     // using the name of the original service definition.
@@ -341,7 +346,7 @@ object SparkConnectService extends Logging {
    */
   def listActiveExecutions: Either[Long, Seq[ExecuteInfo]] = executionManager.listActiveExecutions
 
-  private def createListenerAndUI(sc: SparkContext): Unit = {
+  private[connect] def createListenerAndUI(sc: SparkContext): Unit = {
     val kvStore = sc.statusStore.store.asInstanceOf[ElementTrackingStore]
     listener = new SparkConnectServerListener(kvStore, sc.conf)
     sc.listenerBus.addToStatusQueue(listener)
@@ -379,7 +384,7 @@ object SparkConnectService extends Logging {
         case _ => NettyServerBuilder.forPort(port)
       }
       sb.maxInboundMessageSize(SparkEnv.get.conf.get(CONNECT_GRPC_MAX_INBOUND_MESSAGE_SIZE).toInt)
-        .addService(sparkConnectService)
+        .addService(new SparkConnectBindableService(sparkConnectService))
 
       // Add all registered interceptors to the server builder.
       SparkConnectInterceptorRegistry.chainInterceptors(sb, configuredInterceptors)
@@ -456,7 +461,7 @@ object SparkConnectService extends Logging {
    * Post the event that the Spark Connect service has started. This is expected to be called only
    * once after the service is ready.
    */
-  private def postSparkConnectServiceStarted(): Unit = {
+  private[connect] def postSparkConnectServiceStarted(): Unit = {
     postServiceEvent(isa =>
       SparkListenerConnectServiceStarted(hostAddress, isa.getPort, System.currentTimeMillis()))
   }

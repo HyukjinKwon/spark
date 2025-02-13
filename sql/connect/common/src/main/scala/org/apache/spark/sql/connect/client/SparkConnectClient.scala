@@ -23,6 +23,7 @@ import java.util.concurrent.Executor
 
 import scala.collection.mutable
 import scala.jdk.CollectionConverters._
+import scala.language.existentials
 import scala.util.Properties
 
 import com.google.protobuf.ByteString
@@ -765,7 +766,13 @@ object SparkConnectClient {
     }
 
     def createChannel(): ManagedChannel = {
-      val channelBuilder = Grpc.newChannelBuilderForAddress(host, port, credentials)
+      val channelBuilder = ConnectCommon.getConnectSocketPath
+        .map(LocalClientBuilder.newChannelBuilderForDomainSocket(_, credentials))
+        .getOrElse {
+          Grpc
+            .newChannelBuilderForAddress(host, port, credentials)
+            .asInstanceOf[ManagedChannelBuilder[_]]
+        }
 
       if (metadata.nonEmpty) {
         channelBuilder.intercept(new MetadataHeaderClientInterceptor(metadata))

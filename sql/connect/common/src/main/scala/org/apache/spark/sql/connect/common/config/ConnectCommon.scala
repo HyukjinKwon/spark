@@ -21,4 +21,9 @@ private[sql] object ConnectCommon {
   val CONNECT_GRPC_PORT_MAX_RETRIES: Int = 0
   val CONNECT_GRPC_MAX_MESSAGE_SIZE: Int = 128 * 1024 * 1024
   val CONNECT_GRPC_MARSHALLER_RECURSION_LIMIT: Int = 1024
+  val CONNECT_GRPC_SOCKET_PATH_ENV_NAME = "SPARK_CONNECT_GRPC_SOCKET_PATH"
+  private var CONNECT_GRPC_SOCKET_PATH =
+    Option(System.getenv(ConnectCommon.CONNECT_GRPC_SOCKET_PATH_ENV_NAME))
+  def setConnectSocketPath(path: String): Unit = CONNECT_GRPC_SOCKET_PATH = Option(path)
+  def getConnectSocketPath: Option[String] = CONNECT_GRPC_SOCKET_PATH
 }

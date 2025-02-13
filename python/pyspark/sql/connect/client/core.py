@@ -437,9 +437,10 @@ class DefaultChannelBuilder(ChannelBuilder):
         -------
         GRPC Channel instance.
         """
+        endpoint = SparkConnectClient._uds_path or self.endpoint
 
         if not self.secure:
-            return self._insecure_channel(self.endpoint)
+            return self._insecure_channel(endpoint)
         else:
             ssl_creds = grpc.ssl_channel_credentials()
 
@@ -450,7 +451,7 @@ class DefaultChannelBuilder(ChannelBuilder):
                     ssl_creds, grpc.access_token_call_credentials(self.token)
                 )
 
-            return self._secure_channel(self.endpoint, creds)
+            return self._secure_channel(endpoint, creds)
 
 
 class PlanObservedMetrics(ObservedMetrics):
@@ -590,6 +591,8 @@ class SparkConnectClient(object):
     """
     Conceptually the remote spark session that communicates with the server
     """
+
+    _uds_path = os.environ.get("SPARK_CONNECT_GRPC_SOCKET_PATH")
 
     def __init__(
         self,

@@ -23,7 +23,8 @@ import scala.jdk.CollectionConverters._
 
 import org.apache.spark.SparkContext
 import org.apache.spark.api.plugin.{DriverPlugin, ExecutorPlugin, PluginContext, SparkPlugin}
-import org.apache.spark.sql.connect.service.SparkConnectService
+import org.apache.spark.sql.connect.common.config.ConnectCommon
+import org.apache.spark.sql.connect.service.{LocalSparkConnectService, SparkConnectService}
 
 /**
  * This is the main entry point for Spark Connect.
@@ -45,12 +46,19 @@ class SparkConnectPlugin extends SparkPlugin {
     override def init(
         sc: SparkContext,
         pluginContext: PluginContext): util.Map[String, String] = {
-      SparkConnectService.start(sc)
+      if (ConnectCommon.getConnectSocketPath.isDefined) {
+        LocalSparkConnectService.start()
+      } else {
+        SparkConnectService.start(sc)
+      }
       Map.empty[String, String].asJava
     }
 
     override def shutdown(): Unit = {
-      SparkConnectService.stop()
+      LocalSparkConnectService.stop()
+      if (SparkConnectService.started) {
+        SparkConnectService.stop()
+      }
     }
   }
 
