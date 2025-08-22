@@ -1517,6 +1517,17 @@ class Dataset[T] private[sql](
       s"""Invalid partitionExprs specified: $sortOrders
          |For range partitioning use repartitionByRange(...) instead.
        """.stripMargin)
+    val directPartIds = partitionExprs.filter(_.expr.isInstanceOf[DirectShufflePartitionID])
+    val hasDirectPartChild = partitionExprs.exists(
+      _.expr.children.exists(_.exists(_.isInstanceOf[DirectShufflePartitionID])))
+    if (directPartIds.nonEmpty && partitionExprs.length != 1 || hasDirectPartChild) {
+      throw new IllegalArgumentException(
+        s"""Invalid partitionExprs specified: $directPartIds
+           |direct_shuffle_partition_id should be used only
+           |at the top level without other partition expressions.
+       """.stripMargin)
+    }
+
     withSameTypedPlan {
       RepartitionByExpression(partitionExprs.map(_.expr), logicalPlan, numPartitions)
     }

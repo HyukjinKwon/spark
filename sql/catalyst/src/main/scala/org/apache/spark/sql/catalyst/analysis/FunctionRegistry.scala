@@ -777,6 +777,7 @@ object FunctionRegistry {
     expression[InputFileBlockStart]("input_file_block_start"),
     expression[InputFileBlockLength]("input_file_block_length"),
     expression[MonotonicallyIncreasingID]("monotonically_increasing_id"),
+    expression[DirectShufflePartitionID]("direct_shuffle_partition_id"),
     expression[CurrentDatabase]("current_database"),
     expression[CurrentDatabase]("current_schema", true, Some("3.4.0")),
     expression[CurrentCatalog]("current_catalog"),

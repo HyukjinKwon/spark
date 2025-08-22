@@ -1925,6 +1925,11 @@ object functions {
   def monotonically_increasing_id(): Column = Column.fn("monotonically_increasing_id")
 
   /**
+   * Direct shuffle partition ID
+   */
+  def direct_shuffle_partition_id(e: Column): Column = Column.fn("direct_shuffle_partition_id", e)
+
+  /**
    * Returns col1 if it is not NaN, or col2 if col1 is NaN.
    *
    * Both inputs should be floating point columns (DoubleType or FloatType).
