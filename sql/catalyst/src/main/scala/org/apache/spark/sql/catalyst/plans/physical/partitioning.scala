@@ -348,7 +348,7 @@ case class CoalescedHashPartitioning(from: HashPartitioning, partitions: Seq[Coa
 /**
  * Represents the direct partition ID.
  */
-case class PartitionIdPassThrough(
+case class ShufflePartitionIdPassThrough(
     expr: DirectShufflePartitionID, numPartitions: Int) extends HashPartitioningLike {
 
   def partitionIdExpression: Expression = Pmod(
@@ -358,7 +358,7 @@ case class PartitionIdPassThrough(
   override def expressions: Seq[Expression] = expr :: Nil
 
   override protected def withNewChildrenInternal(
-      newChildren: IndexedSeq[Expression]): PartitionIdPassThrough =
+      newChildren: IndexedSeq[Expression]): ShufflePartitionIdPassThrough =
     copy(expr = newChildren.head.asInstanceOf[DirectShufflePartitionID])
 }
 

@@ -20,7 +20,6 @@ package org.apache.spark.sql.catalyst.expressions
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.codegen.{CodegenContext, ExprCode, FalseLiteral}
 import org.apache.spark.sql.catalyst.expressions.codegen.Block.BlockHelper
-import org.apache.spark.sql.errors.QueryCompilationErrors
 import org.apache.spark.sql.types.{AbstractDataType, DataType, LongType}
 
 /**
@@ -41,7 +40,7 @@ case class DirectShufflePartitionID(override val child: Expression)
   override def eval(input: InternalRow): Any = {
     val result = child.eval(input)
     if (result == null) {
-      throw QueryCompilationErrors.nullArgumentError(nodeName, "expr")
+      throw new IllegalArgumentException("No null allowed")
     }
     result
   }
@@ -50,7 +49,7 @@ case class DirectShufflePartitionID(override val child: Expression)
     val childGen = child.genCode(ctx)
     val code = childGen.code + code"""
       if (${childGen.isNull}) {
-        throw QueryExecutionErrors.nullArgumentError("$nodeName", "expr");
+        throw new IllegalArgumentException("No null allowed");
       }
      """
     ev.copy(code = code, isNull = FalseLiteral, value = childGen.value)

@@ -24,7 +24,7 @@ import org.apache.spark.sql.catalyst.catalog.CatalogTable.VIEW_STORING_ANALYZED_
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, TypedImperativeAggregate}
 import org.apache.spark.sql.catalyst.plans._
-import org.apache.spark.sql.catalyst.plans.physical.{HashPartitioning, PartitionIdPassThrough, Partitioning, RangePartitioning, RoundRobinPartitioning, SinglePartition}
+import org.apache.spark.sql.catalyst.plans.physical.{HashPartitioning, ShufflePartitionIdPassThrough, Partitioning, RangePartitioning, RoundRobinPartitioning, SinglePartition}
 import org.apache.spark.sql.catalyst.trees.TreeNodeTag
 import org.apache.spark.sql.catalyst.trees.TreePattern._
 import org.apache.spark.sql.catalyst.types.DataTypeUtils
@@ -1902,7 +1902,7 @@ case class RepartitionByExpression(
     } else if (
       partitionExpressions.length == 1 &&
         partitionExpressions.head.isInstanceOf[DirectShufflePartitionID]) {
-      PartitionIdPassThrough(
+      ShufflePartitionIdPassThrough(
         partitionExpressions.head.asInstanceOf[DirectShufflePartitionID], numPartitions)
     } else {
       super.partitioning
