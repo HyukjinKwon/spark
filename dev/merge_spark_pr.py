@@ -269,6 +269,61 @@ def print_jira_issue_summary(issue):
     print("%s%s%s%s%s%s" % (summary, assignee, status, url, target_versions, fix_versions))
 
 
+def _semver_max_version(names):
+    """Highest dotted version by numeric semver (SPARK Fix Version naming).
+
+    >>> _semver_max_version([]) is None
+    True
+    >>> _semver_max_version(["4.2.1", "4.3.0"])
+    '4.3.0'
+    >>> _semver_max_version(["10.1.0", "9.99.0"])
+    '10.1.0'
+    """
+    if not names:
+        return None
+    parsed = [(tuple(int(p) for p in n.split(".")), n) for n in names]
+    return max(parsed)[1]
+
+
+def _integration_major_from_branch_x(branch_name):
+    """Rolling integration ref branch-M.x (literal '.x'); returns M or None.
+
+    JIRA Fix Versions are numeric M.minor.patch only (never a literal 'M.x' name).
+
+    >>> _integration_major_from_branch_x("branch-4.x")
+    4
+    >>> _integration_major_from_branch_x("branch-5.x")
+    5
+    >>> _integration_major_from_branch_x("branch-4.2") is None
+    True
+    >>> _integration_major_from_branch_x("master") is None
+    True
+    >>> unreleased = ["6.0.0", "4.3.0", "4.2.9"]
+    >>> major = _integration_major_from_branch_x("branch-4.x")
+    >>> _semver_max_version([n for n in unreleased if re.match(r"^%s\.\d+\.\d+$" % major, n)])
+    '4.3.0'
+    """
+    m = re.match(r"^branch-(\d+)\.x$", branch_name)
+    return int(m.group(1)) if m else None
+
+
+def _ordered_unique(seq):
+    """Preserve order; drop duplicates.
+
+    >>> _ordered_unique([])
+    []
+    >>> _ordered_unique(["6.0.0", "4.3.0", "6.0.0", "4.3.0"])
+    ['6.0.0', '4.3.0']
+    """
+    seen = set()
+    out = []
+    for x in seq:
+        if x not in seen:
+            seen.add(x)
+            out.append(x)
+    return out
+
+
 def get_jira_issue(prompt, default_jira_id=""):
     jira_id = bold_input("%s [%s]: " % (prompt, default_jira_id))
     if jira_id == "":
@@ -308,29 +363,50 @@ def resolve_jira_issue(merge_branches, comment, default_jira_id=""):
         if not x.raw["released"] and not x.raw["archived"] and re.match(r"\d+\.\d+\.\d+", x.name)
     ]
     versions = sorted(versions, key=lambda x: x.name, reverse=True)
+    version_names = [v.name for v in versions]
 
     default_fix_versions = []
     for b in merge_branches:
         if b == "master":
-            default_fix_versions.append(versions[0].name)
-        else:
-            found = False
-            found_versions = []
-            for v in versions:
-                if v.name.startswith(b.replace("branch-", "")):
-                    found_versions.append(v.name)
-                    found = True
-            if found:
-                # There might be several unreleased versions for specific branches
-                # For example, assuming
-                # versions = ['4.0.0', '3.5.1', '3.5.0', '3.4.2', '3.3.4', '3.3.3']
-                # we've found two candidates for branch-3.5, we pick the last/smallest one
-                default_fix_versions.append(found_versions[-1])
+            majors = [n for n in version_names if re.match(r"^\d+\.0\.0$", n)]
+            chosen = _semver_max_version(majors)
+            if chosen:
+                default_fix_versions.append(chosen)
             else:
                 print_error(
-                    "Target version for %s is not found on JIRA, it may be archived or "
-                    "not created. Skipping it." % b
+                    "No unreleased N.0.0 Fix Version found in JIRA for master; "
+                    "enter comma-separated Fix Version(s) manually when prompted."
                 )
+        else:
+            line_major = _integration_major_from_branch_x(b)
+            if line_major is not None:
+                # Git branch-M.x is integration naming only; JIRA Fix Versions are always numeric M.minor.patch.
+                line_names = [
+                    n for n in version_names if re.match(r"^%s\.\d+\.\d+$" % line_major, n)
+                ]
+                chosen = _semver_max_version(line_names)
+                if chosen:
+                    default_fix_versions.append(chosen)
+                else:
+                    print_error(
+                        "Could not infer a Fix Version for %s: JIRA has no unreleased numeric "
+                        "version %s.minor.patch (there is no literal '%s.x' Fix Version). "
+                        "Create the target Fix Version or enter one manually when prompted."
+                        % (b, line_major, line_major)
+                    )
+            else:
+                prefix = b.replace("branch-", "")
+                candidates = [n for n in version_names if n.startswith(prefix)]
+                chosen = _semver_max_version(candidates)
+                if chosen:
+                    default_fix_versions.append(chosen)
+                else:
+                    print_error(
+                        "Target version for %s is not found on JIRA, it may be archived or "
+                        "not created. Skipping it." % b
+                    )
+
+    default_fix_versions = _ordered_unique(default_fix_versions)
 
     for v in default_fix_versions:
         # Handles the case where we have forked a release branch but not yet made the release.
