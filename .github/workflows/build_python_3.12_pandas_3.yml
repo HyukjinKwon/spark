@@ -23,6 +23,9 @@ on:
   schedule:
     - cron: '0 21 */2 * *'
   workflow_dispatch:
+  push:
+    branches:
+      - 'ci-fix/pandas3'
 
 jobs:
   run-build:
@@ -30,7 +33,7 @@ jobs:
       packages: write
     name: Run
     uses: ./.github/workflows/build_and_test.yml
-    if: github.repository == 'apache/spark'
+    if: github.repository != 'apache/spark'
     with:
       java: 17
       branch: master
