@@ -862,8 +862,26 @@ class DateExpressionsSuite extends SparkFunSuite with ExpressionEvalHelper {
       val minTimestamp = Literal.create(Long.MinValue, TimestampType)
       Seq("YEAR", "QUARTER", "MONTH", "WEEK", "DAY", "HOUR", "MINUTE",
           "SECOND", "MILLISECOND").foreach { fmt =>
-        checkExceptionInExpression[ArithmeticException](
-          TruncTimestamp(Literal.create(fmt, StringType), minTimestamp), "")
+        val expr = TruncTimestamp(Literal.create(fmt, StringType), minTimestamp)
+        // The overflow surfaces as a raw `ArithmeticException` from `Math.*Exact`. Evaluate the
+        // expression directly (so the raw exception propagates) in both the interpreted and the
+        // codegen path. The exception message is not part of the API contract: JDK 25 may throw
+        // it with a `null` message in codegen mode (JIT "hot throw", see SPARK-55714 /
+        // SPARK-55755 / JDK-8367990), while the interpreter reports "long overflow". Assert the
+        // exception type and tolerate a null message.
+        Seq(
+          CodegenObjectFactoryMode.NO_CODEGEN,
+          CodegenObjectFactoryMode.CODEGEN_ONLY).foreach { codegenMode =>
+          withSQLConf(SQLConf.CODEGEN_FACTORY_MODE.key -> codegenMode.toString) {
+            val eval: () => Any = if (codegenMode == CodegenObjectFactoryMode.NO_CODEGEN) {
+              () => evaluateWithoutCodegen(expr)
+            } else {
+              () => evaluateWithMutableProjection(expr)
+            }
+            val errMsg = intercept[ArithmeticException](eval()).getMessage
+            assert(errMsg == null || errMsg.contains("overflow"))
+          }
+        }
       }
     }
   }
