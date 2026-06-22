@@ -23,6 +23,7 @@ on:
   push:
     branches:
       - 'ci-fix/java25'
+      - 'ci-fix/java25-validate2'
   schedule:
     - cron: '0 4 */2 * *'
   workflow_dispatch:
