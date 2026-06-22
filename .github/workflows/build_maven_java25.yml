@@ -30,6 +30,7 @@ jobs:
       packages: write
     name: Run
     uses: ./.github/workflows/maven_test.yml
-    if: github.repository == 'apache/spark'
+    # CI-VALIDATION: allow manual workflow_dispatch runs on forks (revert before merge)
+    if: github.repository == 'apache/spark' || github.event_name == 'workflow_dispatch'
     with:
       java: 25
