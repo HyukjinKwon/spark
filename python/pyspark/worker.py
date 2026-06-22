@@ -3157,6 +3157,23 @@ def read_udfs(pickleSer, udf_info_list, eval_type, runner_conf, eval_conf):
             [StructField(name, info[3]) for name, info in zip(col_names, udf_infos)]
         )
 
+        # Under pandas >= 3.0.0, a top-level StringType input column is converted to a
+        # pandas Series backed by ``pd.StringDtype(na_value=np.nan)``, so its null values
+        # surface as ``np.nan`` (and then stringify to ``'nan'``) instead of ``None`` when
+        # materialized to Python objects. The legacy pandas UDF conversion is expected to
+        # pass ``None`` to the UDF for null string inputs, matching the pre-3.0 behavior, so
+        # we record which input columns are StringType to restore ``None`` for their nulls.
+        input_fields = eval_conf.input_type
+        string_input_offsets = (
+            {
+                i
+                for i, field in enumerate(input_fields)
+                if isinstance(field.dataType, StringType)
+            }
+            if input_fields is not None
+            else set()
+        )
+
         @fail_on_stopiteration
         def _evaluate_batch_udf_legacy(udf_func, rows):
             if runner_conf.arrow_concurrency_level <= 0:
@@ -3182,13 +3199,24 @@ def read_udfs(pickleSer, udf_info_list, eval_type, runner_conf, eval_conf):
                 if not pandas_columns:
                     pandas_columns = [pd.Series([_NoValue] * num_rows)]
 
+                # Restore ``None`` for null values of StringType input columns. With
+                # pandas >= 3.0.0 these nulls would otherwise be materialized as ``np.nan``.
+                column_values = []
+                for o, col in enumerate(pandas_columns):
+                    if o in string_input_offsets:
+                        column_values.append(
+                            [None if v is None or v is pd.NA or v != v else v for v in col]
+                        )
+                    else:
+                        column_values.append(col.tolist())
+
                 # --- Process: evaluate each UDF row-by-row ---
                 result_series = []
                 for udf_func, offsets, zero_arg, _, coerce in udf_infos:
                     rows = (
                         [() for _ in range(num_rows)]
                         if zero_arg
-                        else list(zip(*[pandas_columns[o].tolist() for o in offsets]))
+                        else list(zip(*[column_values[o] for o in offsets]))
                     )
                     results = _evaluate_batch_udf_legacy(udf_func, rows)
                     verify_result_row_count(len(results), num_rows)

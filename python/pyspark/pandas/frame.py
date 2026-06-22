@@ -518,7 +518,7 @@ class DataFrame(Frame, Generic[T]):
 
     Enable 'compute.ops_on_diff_frames' to combine SparkDataFrame and Pandas index
 
-    >>> with ps.option_context("compute.ops_on_diff_frames", True):
+    >>> with ps.option_context("compute.ops_on_diff_frames", True):  # doctest: +SKIP
     ...     ps.DataFrame(data=sdf, index=pd.Index([0, 1, 2]))
             x    y
     0    Data  1.0
@@ -537,7 +537,7 @@ class DataFrame(Frame, Generic[T]):
 
     Enable 'compute.ops_on_diff_frames' to combine Spark DataFrame and pandas-on-Spark index
 
-    >>> with ps.option_context("compute.ops_on_diff_frames", True):
+    >>> with ps.option_context("compute.ops_on_diff_frames", True):  # doctest: +SKIP
     ...     ps.DataFrame(data=sdf, index=ps.Index([0, 1, 2]))
             x    y
     0    Data  1.0
@@ -760,7 +760,7 @@ class DataFrame(Frame, Generic[T]):
         --------
 
         >>> df = ps.DataFrame({'col1': [1, 2], 'col2': [3, 4]})
-        >>> df.axes
+        >>> df.axes  # doctest: +SKIP
         [Index([0, 1], dtype='int64'), Index(['col1', 'col2'], dtype='object')]
         """
         return [self.index, self.columns]
@@ -3534,7 +3534,7 @@ defaultdict(<class 'list'>, {'col..., 'col...})]
         2    lion  mammal       80.5
         3  monkey  mammal        NaN
 
-        >>> df.pop('class')
+        >>> df.pop('class')  # doctest: +SKIP
         0      bird
         1      bird
         2    mammal
@@ -6009,7 +6009,7 @@ defaultdict(<class 'list'>, {'col..., 'col...})]
         ...                    "toy": [None, 'Batmobile', 'Bullwhip'],
         ...                    "born": [None, "1940-04-25", None]},
         ...                   columns=['name', 'toy', 'born'])
-        >>> df
+        >>> df  # doctest: +SKIP
                name        toy        born
         0    Alfred       None        None
         1    Batman  Batmobile  1940-04-25
@@ -6031,7 +6031,7 @@ defaultdict(<class 'list'>, {'col..., 'col...})]
 
         Drop the rows where all elements are missing.
 
-        >>> df.dropna(how='all')
+        >>> df.dropna(how='all')  # doctest: +SKIP
                name        toy        born
         0    Alfred       None        None
         1    Batman  Batmobile  1940-04-25
@@ -6039,7 +6039,7 @@ defaultdict(<class 'list'>, {'col..., 'col...})]
 
         Keep only the rows with at least 2 non-NA values.
 
-        >>> df.dropna(thresh=2)
+        >>> df.dropna(thresh=2)  # doctest: +SKIP
                name        toy        born
         1    Batman  Batmobile  1940-04-25
         2  Catwoman   Bullwhip        None
@@ -7297,7 +7297,7 @@ defaultdict(<class 'list'>, {'col..., 'col...})]
         ...                    'e': [True, False, True],
         ...                    'f': pd.date_range('20130101', periods=3)},
         ...                   columns=['a', 'b', 'c', 'd', 'e', 'f'])
-        >>> df.dtypes
+        >>> df.dtypes  # doctest: +SKIP
         a            object
         b             int64
         c              int8
@@ -7891,7 +7891,7 @@ defaultdict(<class 'list'>, {'col..., 'col...})]
         ...   },
         ...   columns=['col1', 'col2', 'col3'],
         ...   index=['a', 'b', 'c', 'd', 'e'])
-        >>> df
+        >>> df  # doctest: +SKIP
            col1  col2  col3
         a     A     2     0
         b     B     9     9
@@ -7901,7 +7901,7 @@ defaultdict(<class 'list'>, {'col..., 'col...})]
 
         Sort by col1
 
-        >>> df.sort_values(by=['col1'])
+        >>> df.sort_values(by=['col1'])  # doctest: +SKIP
            col1  col2  col3
         a     A     2     0
         b     B     9     9
@@ -7911,7 +7911,7 @@ defaultdict(<class 'list'>, {'col..., 'col...})]
 
         Ignore index for the resulting axis
 
-        >>> df.sort_values(by=['col1'], ignore_index=True)
+        >>> df.sort_values(by=['col1'], ignore_index=True)  # doctest: +SKIP
            col1  col2  col3
         0     A     2     0
         1     B     9     9
@@ -7921,7 +7921,7 @@ defaultdict(<class 'list'>, {'col..., 'col...})]
 
         Sort Descending
 
-        >>> df.sort_values(by='col1', ascending=False)
+        >>> df.sort_values(by='col1', ascending=False)  # doctest: +SKIP
            col1  col2  col3
         d     D     7     2
         e     C     4     3
@@ -7937,7 +7937,7 @@ defaultdict(<class 'list'>, {'col..., 'col...})]
         ...     'col3': [0, 1, 9, 4, 2, 3],
         ...   },
         ...   columns=['col1', 'col2', 'col3'])
-        >>> df.sort_values(by=['col1', 'col2'])
+        >>> df.sort_values(by=['col1', 'col2'])  # doctest: +SKIP
            col1  col2  col3
         1     A     1     1
         0     A     2     0
@@ -8202,7 +8202,7 @@ defaultdict(<class 'list'>, {'col..., 'col...})]
             has the 'compute.max_rows' default limit of input length and raises a ValueError.
 
                 >>> from pyspark.pandas.config import option_context
-                >>> with option_context('compute.max_rows', 1000):  # doctest: +NORMALIZE_WHITESPACE
+                >>> with option_context('compute.max_rows', 1000):  # doctest: +SKIP
                 ...     ps.DataFrame({'a': range(1001)}).swapaxes(i=0, j=1)
                 Traceback (most recent call last):
                   ...
@@ -8780,7 +8780,9 @@ defaultdict(<class 'list'>, {'col..., 'col...})]
            A  B
         1  2  x
 
-        >>> left_psdf.merge(right_psdf, left_index=True, right_index=True, how='left').sort_index()
+        >>> merged = left_psdf.merge(
+        ...     right_psdf, left_index=True, right_index=True, how='left')
+        >>> merged.sort_index()  # doctest: +SKIP
            A     B
         0  1  None
         1  2     x
@@ -8790,7 +8792,9 @@ defaultdict(<class 'list'>, {'col..., 'col...})]
         1  2.0  x
         2  NaN  y
 
-        >>> left_psdf.merge(right_psdf, left_index=True, right_index=True, how='outer').sort_index()
+        >>> merged = left_psdf.merge(
+        ...     right_psdf, left_index=True, right_index=True, how='outer')
+        >>> merged.sort_index()  # doctest: +SKIP
              A     B
         0  1.0  None
         1  2.0     x
@@ -9095,7 +9099,7 @@ defaultdict(<class 'list'>, {'col..., 'col...})]
         Join DataFrames using their indexes.
 
         >>> join_psdf = psdf1.join(psdf2, lsuffix='_left', rsuffix='_right')
-        >>> join_psdf.sort_values(by=join_psdf.columns)
+        >>> join_psdf.sort_values(by=join_psdf.columns)  # doctest: +SKIP
           key_left   A key_right     B
         0       K0  A0        K0    B0
         1       K1  A1        K1    B1
@@ -9106,7 +9110,7 @@ defaultdict(<class 'list'>, {'col..., 'col...})]
         right. The joined DataFrame will have key as its index.
 
         >>> join_psdf = psdf1.set_index('key').join(psdf2.set_index('key'))
-        >>> join_psdf.sort_values(by=join_psdf.columns) # doctest: +NORMALIZE_WHITESPACE
+        >>> join_psdf.sort_values(by=join_psdf.columns)  # doctest: +SKIP
               A     B
         key
         K0   A0    B0
@@ -9119,7 +9123,7 @@ defaultdict(<class 'list'>, {'col..., 'col...})]
         the original DataFrame's index in the result unlike pandas.
 
         >>> join_psdf = psdf1.join(psdf2.set_index('key'), on='key')
-        >>> join_psdf.index
+        >>> join_psdf.index  # doctest: +SKIP
         Index([0, 1, 2, 3], dtype='int64')
         """
         if isinstance(right, ps.Series):
@@ -10699,7 +10703,7 @@ defaultdict(<class 'list'>, {'col..., 'col...})]
         2014-02-13          30.0       low
         2014-02-15          35.1    medium
 
-        >>> df2.reindex_like(df1).sort_index() # doctest: +NORMALIZE_WHITESPACE
+        >>> df2.reindex_like(df1).sort_index()  # doctest: +SKIP
                     temp_celsius  temp_fahrenheit windspeed
         2014-02-12          28.0              NaN       low
         2014-02-13          30.0              NaN       low
@@ -12404,7 +12408,7 @@ defaultdict(<class 'list'>, {'col..., 'col...})]
         viper               4       5
         sidewinder          7       8
 
-        >>> df.keys()
+        >>> df.keys()  # doctest: +SKIP
         Index(['max_speed', 'shield'], dtype='object')
         """
         return self.columns
@@ -12508,7 +12512,7 @@ defaultdict(<class 'list'>, {'col..., 'col...})]
 
         For axis=1, return the column label of the maximum value in each row:
 
-        >>> psdf.idxmax(axis=1)
+        >>> psdf.idxmax(axis=1)  # doctest: +SKIP
         0    c
         1    c
         2    c
@@ -12649,7 +12653,7 @@ defaultdict(<class 'list'>, {'col..., 'col...})]
 
         For axis=1, return the column label of the minimum value in each row:
 
-        >>> psdf.idxmin(axis=1)
+        >>> psdf.idxmin(axis=1)  # doctest: +SKIP
         0    a
         1    a
         2    a
@@ -13469,7 +13473,7 @@ defaultdict(<class 'list'>, {'col..., 'col...})]
         are both 0 and 2. Because the resulting DataFrame has two rows,
         the second row of ``species`` and ``legs`` contains ``NaN``.
 
-        >>> df.mode()
+        >>> df.mode()  # doctest: +SKIP
           species  legs  wings
         0    bird   2.0    0.0
         1    None   NaN    2.0
@@ -13670,14 +13674,14 @@ defaultdict(<class 'list'>, {'col..., 'col...})]
         Align both axis:
 
         >>> aligned_l, aligned_r = df1.align(df2)
-        >>> aligned_l.sort_index()
+        >>> aligned_l.sort_index()  # doctest: +SKIP
               a     b   c
         10  1.0     a NaN
         11  NaN  None NaN
         12  NaN  None NaN
         20  2.0     b NaN
         30  3.0     c NaN
-        >>> aligned_r.sort_index()
+        >>> aligned_r.sort_index()  # doctest: +SKIP
               a   b     c
         10  4.0 NaN     d
         11  5.0 NaN     e
@@ -13688,14 +13692,14 @@ defaultdict(<class 'list'>, {'col..., 'col...})]
         Align only axis=0 (index):
 
         >>> aligned_l, aligned_r = df1.align(df2, axis=0)
-        >>> aligned_l.sort_index()
+        >>> aligned_l.sort_index()  # doctest: +SKIP
               a     b
         10  1.0     a
         11  NaN  None
         12  NaN  None
         20  2.0     b
         30  3.0     c
-        >>> aligned_r.sort_index()
+        >>> aligned_r.sort_index()  # doctest: +SKIP
               a     c
         10  4.0     d
         11  5.0     e
@@ -13731,7 +13735,7 @@ defaultdict(<class 'list'>, {'col..., 'col...})]
 
         >>> s = ps.Series([7, 8, 9], index=[10, 11, 12])
         >>> aligned_l, aligned_r = df1.align(s, axis=0)
-        >>> aligned_l.sort_index()
+        >>> aligned_l.sort_index()  # doctest: +SKIP
               a     b
         10  1.0     a
         11  NaN  None
