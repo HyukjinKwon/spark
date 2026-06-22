@@ -23,6 +23,11 @@ on:
   schedule:
     - cron: '0 14 */2 * *'
   workflow_dispatch:
+  # [DO-NOT-MERGE] Run this scheduled Maven build on the fork branch to verify
+  # the AF_UNIX socket-path fix. This trigger is reverted before merge.
+  push:
+    branches:
+      - 'fix-ci/udf-worker-uds-path'
 
 jobs:
   run-build:
@@ -30,6 +35,7 @@ jobs:
       packages: write
     name: Run
     uses: ./.github/workflows/maven_test.yml
-    if: github.repository == 'apache/spark'
+    # [DO-NOT-MERGE] Allow this build to run on the fork for verification.
+    if: github.repository == 'apache/spark' || github.repository == 'HyukjinKwon/spark'
     with:
       java: 21
