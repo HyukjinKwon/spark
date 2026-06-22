@@ -162,51 +162,19 @@ jobs:
         hive:
           - hive2.3
         modules:
+          # [DO-NOT-MERGE] Trimmed to sql#core (+ a trivial module) to verify the
+          # AF_UNIX socket-path fix quickly and cheaply. Restored before merge.
           - >-
-            core,launcher,common#unsafe,common#kvstore,common#network-common,common#network-shuffle,common#sketch,common#utils,common#utils-java,common#variant
-          - >-
-            graphx,streaming,hadoop-cloud
-          - >-
-            mllib-local,mllib,sql#pipelines
-          - >-
-            repl,sql#hive-thriftserver
-          - >-
-            connector#kafka-0-10,connector#kafka-0-10-sql,connector#kafka-0-10-token-provider,connector#spark-ganglia-lgpl,connector#protobuf,connector#avro,connector#kinesis-asl
-          - >-
-            sql#api,sql#catalyst,resource-managers#yarn,resource-managers#kubernetes#core
-          - >-
-            connect
+            common#sketch
         # Here, we split Hive and SQL tests into some of slow ones and the rest of them.
         included-tags: [ "" ]
         excluded-tags: [ "" ]
         comment: [ "" ]
         include:
-          # Hive tests
-          - modules: sql#hive
-            java: ${{ inputs.java }}
-            hadoop: ${{ inputs.hadoop }}
-            hive: hive2.3
-            included-tags: org.apache.spark.tags.SlowHiveTest
-            comment: "- slow tests"
-          - modules: sql#hive
-            java: ${{ inputs.java }}
-            hadoop: ${{ inputs.hadoop }}
-            hive: hive2.3
-            excluded-tags: org.apache.spark.tags.SlowHiveTest
-            comment: "- other tests"
-          # SQL tests
-          - modules: sql#core
-            java: ${{ inputs.java }}
-            hadoop: ${{ inputs.hadoop }}
-            hive: hive2.3
-            included-tags: org.apache.spark.tags.ExtendedSQLTest
-            comment: "- extended tests"
-          - modules: sql#core
-            java: ${{ inputs.java }}
-            hadoop: ${{ inputs.hadoop }}
-            hive: hive2.3
-            included-tags: org.apache.spark.tags.SlowSQLTest
-            comment: "- slow tests"
+          # [DO-NOT-MERGE] Only the sql#core "other tests" lane runs the
+          # (untagged) PythonUDFWorkerSpecificationSuite that this branch fixes.
+          # The extended/slow lanes are dropped here purely to verify this fix
+          # cheaply; the full matrix is restored before merge.
           - modules: sql#core
             java: ${{ inputs.java }}
             hadoop: ${{ inputs.hadoop }}
