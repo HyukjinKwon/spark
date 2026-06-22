@@ -30,7 +30,8 @@ jobs:
     name: "Build modules: pyspark-client"
     runs-on: ubuntu-latest
     timeout-minutes: 120
-    if: github.repository == 'apache/spark'
+    # CI-VALIDATION: allow manual workflow_dispatch runs on forks (revert before merge)
+    if: github.repository == 'apache/spark' || github.event_name == 'workflow_dispatch'
     steps:
       - name: Checkout Spark repository
         uses: actions/checkout@v6
