@@ -22,7 +22,9 @@ name: "Build"
 on:
   push:
     branches:
-    - '**'
+    # [DO-NOT-MERGE] On the ci-fix/branch35-validate branch the full Build is disabled; only the
+    # focused black-pin validation workflow runs here.
+    - '__disabled_on_validation_branch__'
 
 jobs:
   call-build-and-test:
