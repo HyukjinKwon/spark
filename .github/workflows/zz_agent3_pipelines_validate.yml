@@ -29,13 +29,17 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Install Spark Connect python deps
+      - name: Install Spark Connect python deps (pinned to match dev/infra image)
         run: |
           python -m pip install --upgrade pip
+          # NOTE: pin pandas==2.3.3 (NOT 3.x — pandas 3 is a known-broken, separately-tracked
+          # issue) and pin protobuf/grpcio to the versions the Connect server is built against,
+          # otherwise the python client/server RPC mismatches and every test fails with
+          # "Session ... not found".
           python -m pip install \
-            'numpy' 'pandas' 'pyarrow' 'pyyaml' \
-            'grpcio>=1.76.0' 'grpcio-status>=1.76.0' \
-            'protobuf' 'googleapis-common-protos>=1.71.0'
+            'numpy' 'pandas==2.3.3' 'pyarrow>=18.0.0' 'pyyaml' 'zstandard>=0.25.0' \
+            'grpcio==1.76.0' 'grpcio-status==1.76.0' \
+            'protobuf==6.33.5' 'googleapis-common-protos==1.71.0'
       - name: Cache Maven local repo
         uses: actions/cache@v4
         with:
