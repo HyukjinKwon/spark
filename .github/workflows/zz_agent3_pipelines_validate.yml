@@ -1,0 +1,57 @@
+name: zz agent3 validate PythonPipelineSuite
+# [DO-NOT-MERGE] Throwaway fast-validation workflow for the flaky-race fix in
+# PythonPipelineSuite ("Race while writing batch 0"). Builds only
+# sql/connect/server (+ its deps) and runs ONLY PythonPipelineSuite, with the
+# Spark Connect python deps installed so the suite actually runs (it self-skips
+# via PythonTestDepsChecker when deps are missing). Fast green/red signal without
+# the multi-hour full matrix. Lives only on the validation branch; not added to
+# ci-green-2026-06.
+
+on:
+  push:
+    branches:
+      - "ci-fix/agent3-pipelines-validate"
+  workflow_dispatch:
+
+jobs:
+  pipelines-suite:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install Spark Connect python deps
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install \
+            'numpy' 'pandas' 'pyarrow' 'pyyaml' \
+            'grpcio>=1.76.0' 'grpcio-status>=1.76.0' \
+            'protobuf' 'googleapis-common-protos>=1.71.0'
+      - name: Cache Maven local repo
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: m2-pipelines-jdk17-${{ hashFiles('**/pom.xml') }}
+          restore-keys: m2-pipelines-jdk17-
+      - name: Sanity check pyspark importable from repo source
+        run: |
+          export PYTHONPATH="$PWD/python:$PWD/python/lib/py4j-0.10.9.9-src.zip"
+          python -c "import pyspark; from pyspark.sql.connect.utils import check_dependencies; import yaml; print('connect deps OK')"
+      - name: Build sql/connect/server and run PythonPipelineSuite
+        run: |
+          export PYTHONPATH="$PWD/python:$PWD/python/lib/py4j-0.10.9.9-src.zip"
+          ./build/mvn -pl sql/connect/server -am -B \
+            -Phive \
+            -Dtest=none \
+            -DwildcardSuites=org.apache.spark.sql.connect.pipelines.PythonPipelineSuite \
+            -DfailIfNoTests=false \
+            test
