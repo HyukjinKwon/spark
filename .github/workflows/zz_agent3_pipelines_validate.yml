@@ -50,12 +50,19 @@ jobs:
         run: |
           export PYTHONPATH="$PWD/python:$PWD/python/lib/py4j-0.10.9.9-src.zip"
           python -c "import pyspark; from pyspark.sql.connect.utils import check_dependencies; import yaml; print('connect deps OK')"
-      - name: Build sql/connect/server and run PythonPipelineSuite
+      - name: Build deps once (install to local m2 so repeats are fast)
+        run: |
+          ./build/mvn -pl sql/connect/server -am -B -Phive -DskipTests install
+      - name: Run PythonPipelineSuite 10x (repeat to prove the race is deflaked)
         run: |
           export PYTHONPATH="$PWD/python:$PWD/python/lib/py4j-0.10.9.9-src.zip"
-          ./build/mvn -pl sql/connect/server -am -B \
-            -Phive \
-            -Dtest=none \
-            -DwildcardSuites=org.apache.spark.sql.connect.pipelines.PythonPipelineSuite \
-            -DfailIfNoTests=false \
-            test
+          # A flaky-race fix needs MULTIPLE green runs, not one. Loop the suite and fail fast.
+          for i in $(seq 1 10); do
+            echo "===================== PythonPipelineSuite run $i/10 ====================="
+            ./build/mvn -pl sql/connect/server -B -Phive \
+              -Dtest=none \
+              -DwildcardSuites=org.apache.spark.sql.connect.pipelines.PythonPipelineSuite \
+              -DfailIfNoTests=false \
+              test || { echo "PythonPipelineSuite FAILED on run $i/10"; exit 1; }
+          done
+          echo "All 10 PythonPipelineSuite runs passed."
