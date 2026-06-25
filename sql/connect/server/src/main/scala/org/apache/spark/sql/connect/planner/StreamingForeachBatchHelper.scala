@@ -16,10 +16,13 @@
  */
 package org.apache.spark.sql.connect.planner
 
-import java.io.EOFException
+import java.io.{DataInputStream, EOFException, IOException, InterruptedIOException}
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 import scala.jdk.CollectionConverters._
 import scala.util.control.NonFatal
@@ -45,6 +48,61 @@ import org.apache.spark.util.Utils
 object StreamingForeachBatchHelper extends Logging {
 
   type ForeachBatchFnType = (DataFrame, Long) => Unit
+
+  /**
+   * Reads an int from the Python worker while remaining responsive to interruption of the calling
+   * thread.
+   *
+   * `dataIn` is backed by a blocking `SocketChannel` exposed through `Channels.newInputStream`,
+   * whose `read()` ignores `Thread.interrupt()`. The micro-batch stream-execution thread blocks
+   * here while the Python worker processes a batch, so without this `query.stop()` cannot abort the
+   * read and `StreamExecution.interruptAndAwaitExecutionThreadTermination` times out after
+   * `spark.sql.streaming.stopTimeout`.
+   *
+   * A short-lived daemon watchdog waits for the calling thread to be interrupted; when that
+   * happens it stops the runner, which closes the worker socket and unblocks the read with an
+   * `IOException` (e.g. `AsynchronousCloseException`). We then surface the interruption as an
+   * `InterruptedIOException` with the interrupt status preserved so the stream thread unwinds and
+   * stops promptly. In the normal (non-interrupted) case the watchdog exits as soon as the read
+   * returns and adds no overhead beyond a parked thread.
+   */
+  private def interruptiblyReadInt(dataIn: DataInputStream, runner: StreamingPythonRunner): Int = {
+    val readerThread = Thread.currentThread()
+    val interruptedByWatchdog = new AtomicBoolean(false)
+    val done = new CountDownLatch(1)
+    val watchdog = new Thread(s"foreachBatch-read-watchdog-${readerThread.getName}") {
+      setDaemon(true)
+      override def run(): Unit = {
+        try {
+          // Wake up either when the read completes (latch) or when the reader is interrupted.
+          while (!done.await(50, TimeUnit.MILLISECONDS)) {
+            if (readerThread.isInterrupted) {
+              interruptedByWatchdog.set(true)
+              // Closes the worker socket, which aborts the blocking read on the reader thread.
+              runner.stop()
+              return
+            }
+          }
+        } catch {
+          case _: InterruptedException => // Watchdog itself interrupted; just exit.
+        }
+      }
+    }
+    watchdog.start()
+    try {
+      dataIn.readInt()
+    } catch {
+      case e: IOException if interruptedByWatchdog.get() =>
+        // The read was aborted because we closed the socket in response to an interrupt. Preserve
+        // the interrupt status so the micro-batch loop observes it and the stream thread stops.
+        readerThread.interrupt()
+        throw new InterruptedIOException("foreachBatch Python worker read interrupted on stop")
+          .initCause(e).asInstanceOf[InterruptedIOException]
+    } finally {
+      done.countDown()
+      watchdog.interrupt()
+    }
+  }
 
   // Visible for testing.
   /** An AutoClosable to clean up resources on query termination. Stops Python worker. */
@@ -169,7 +227,15 @@ object StreamingForeachBatchHelper extends Logging {
       dataOut.flush()
 
       try {
-        dataIn.readInt() match {
+        // `dataIn` wraps a blocking SocketChannel via `Channels.newInputStream`, whose `read()`
+        // is NOT interruptible: `Thread.interrupt()` does not unblock it. The micro-batch stream
+        // thread spends most of its time blocked here waiting for the Python worker to finish the
+        // batch, so on `query.stop()` `StreamExecution.interruptAndAwaitExecutionThreadTermination`
+        // interrupts this thread but the read does not wake up, and `stop()` times out after
+        // `spark.sql.streaming.stopTimeout` (SPARK-XXXXX). Make the read responsive to interrupt by
+        // closing the worker socket from a watchdog once the calling thread is interrupted; the
+        // close aborts the blocking read so this thread can unwind promptly.
+        interruptiblyReadInt(dataIn, runner) match {
           case 0 =>
             logInfo(
               log"[session: ${MDC(SESSION_ID, sessionHolder.sessionId)}] " +
