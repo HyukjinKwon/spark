@@ -41,6 +41,48 @@ jobs:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         run-id: ${{ github.event.workflow_run.id }}
         pattern: "test-*"
+    - name: Sanitize test report XML
+      # The surefire-report action turns each failed/errored <testcase> into a
+      # GitHub check-run annotation, deriving the annotation `path` from the
+      # testcase `classname` (falling back to `name`). A suite-level error
+      # produces a <testcase> with an empty classname, so the derived path is
+      # empty, and GitHub rejects the whole batch with
+      #   Validation Failed: {"resource":"CheckRun","field":"annotations","code":"invalid"}
+      # which makes the entire "Report test results" run fail even though the
+      # test results were parsed correctly. Backfill a placeholder classname so
+      # every annotation has a non-empty path.
+      shell: python {0}
+      run: |
+        import glob
+        import xml.etree.ElementTree as ET
+
+        PLACEHOLDER = "org.apache.spark.UnknownTestSuite"
+        changed = 0
+        for path in glob.glob("**/target/test-reports/*.xml", recursive=True):
+            try:
+                tree = ET.parse(path)
+            except ET.ParseError:
+                # Leave malformed files untouched; the report action skips them.
+                continue
+            root = tree.getroot()
+            suites = root.iter("testsuite")
+            dirty = False
+            for suite in suites:
+                suite_name = (suite.get("name") or "").strip()
+                for case in suite.iter("testcase"):
+                    classname = (case.get("classname") or "").strip()
+                    name = (case.get("name") or "").strip()
+                    if not classname and not name:
+                        case.set("classname", suite_name or PLACEHOLDER)
+                        dirty = True
+                    elif not classname:
+                        # `name` alone still yields a path; keep them consistent.
+                        case.set("classname", suite_name or name or PLACEHOLDER)
+                        dirty = True
+            if dirty:
+                tree.write(path, encoding="utf-8", xml_declaration=True)
+                changed += 1
+        print(f"Sanitized {changed} test report file(s).")
     - name: Publish test report
       uses: scacap/action-surefire-report@5609ce4db72c09db044803b344a8968fd1f315da
       with:
