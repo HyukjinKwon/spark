@@ -31,7 +31,10 @@ import org.apache.spark.shuffle.checksum.RowBasedChecksum
 class UnsafeRowChecksum extends RowBasedChecksum() {
 
   override protected def calculateRowChecksum(key: Any, value: Any): Long = {
-    assert(
+    // Use `require` (throws a NonFatal IllegalArgumentException) rather than `assert` (throws a
+    // fatal AssertionError). RowBasedChecksum.update only catches NonFatal throwables to disable
+    // the checksum on error; an AssertionError would escape that handler and fail the shuffle.
+    require(
       value.isInstanceOf[UnsafeRow],
       "Expecting UnsafeRow but got " + value.getClass.getName)
 
