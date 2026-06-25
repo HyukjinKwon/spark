@@ -93,6 +93,25 @@ abstract class KafkaSourceTest extends StreamTest with SharedSparkSession with K
   }
 
   /**
+   * Wait until the query has processed at least the given `offset` for the given source, failing
+   * with a clear timeout if it does not happen within `streamingTimeout`.
+   *
+   * [[StreamExecution.awaitOffset]] only bounds each individual wait iteration by its `timeoutMs`
+   * argument; the outer loop has no overall cap, so calling it directly from an `Execute` block
+   * (which, unlike the `AddData`/`CheckAnswer` path, is not wrapped in `failAfter`) hangs forever
+   * if the committed offset never reaches `offset` exactly. This is especially likely in continuous
+   * mode, where partition offsets are reported per-epoch and the equality check can keep missing.
+   * Wrapping in `failAfter` turns such a hang into a deterministic, attributable test failure
+   * instead of stalling the whole suite (e.g. SPARK CI "Test still running after 2m45s").
+   */
+  protected def awaitOffsetWithTimeout(
+      query: StreamExecution, sourceIndex: Int, offset: KafkaSourceOffset): Unit = {
+    failAfter(streamingTimeout) {
+      query.awaitOffset(sourceIndex, offset, streamingTimeout.toMillis)
+    }
+  }
+
+  /**
    * Add data to Kafka.
    *
    * `topicAction` can be used to run actions for each topic before inserting data.
@@ -2199,8 +2218,8 @@ abstract class KafkaSourceSuiteBase extends KafkaSourceTest {
       Execute { q =>
         val partitions = (0 to 4).map(new TopicPartition(topic, _))
         // wait to reach the last offset in every partition
-        q.awaitOffset(
-          0, KafkaSourceOffset(partitions.map(tp => tp -> 3L).toMap), streamingTimeout.toMillis)
+        awaitOffsetWithTimeout(
+          q, 0, KafkaSourceOffset(partitions.map(tp => tp -> 3L).toMap))
       },
       CheckAnswer(-21, -22, -11, -12, 2, 12),
       Execute { q =>
@@ -2208,8 +2227,7 @@ abstract class KafkaSourceSuiteBase extends KafkaSourceTest {
         // wait to reach the new last offset in every partition
         val partitions = (0 to 3).map(new TopicPartition(topic, _)).map(tp => tp -> 3L) ++
           Seq(new TopicPartition(topic, 4) -> 6L)
-        q.awaitOffset(
-          0, KafkaSourceOffset(partitions.toMap), streamingTimeout.toMillis)
+        awaitOffsetWithTimeout(q, 0, KafkaSourceOffset(partitions.toMap))
       },
       CheckNewAnswer(23, 24, 25)
     )
@@ -2245,8 +2263,8 @@ abstract class KafkaSourceSuiteBase extends KafkaSourceTest {
       Execute { q =>
         val partitions = (0 to 4).map(new TopicPartition(topic, _))
         // wait to reach the last offset in every partition
-        q.awaitOffset(
-          0, KafkaSourceOffset(partitions.map(tp => tp -> 3L).toMap), streamingTimeout.toMillis)
+        awaitOffsetWithTimeout(
+          q, 0, KafkaSourceOffset(partitions.map(tp => tp -> 3L).toMap))
       },
       CheckAnswer(-21, -22, -11, -12, 2, 12),
       Execute { q =>
@@ -2254,8 +2272,7 @@ abstract class KafkaSourceSuiteBase extends KafkaSourceTest {
         // wait to reach the new last offset in every partition
         val partitions = (0 to 3).map(new TopicPartition(topic, _)).map(tp => tp -> 3L) ++
           Seq(new TopicPartition(topic, 4) -> 6L)
-        q.awaitOffset(
-          0, KafkaSourceOffset(partitions.toMap), streamingTimeout.toMillis)
+        awaitOffsetWithTimeout(q, 0, KafkaSourceOffset(partitions.toMap))
       },
       CheckNewAnswer(23, 24, 25)
     )
@@ -2402,9 +2419,8 @@ abstract class KafkaSourceSuiteBase extends KafkaSourceTest {
       makeSureGetOffsetCalled,
       Execute { q =>
         // wait to reach the last offset in every partition
-        q.awaitOffset(0,
-          KafkaSourceOffset(partitionOffsets.transform((_, _) => 3L)),
-          streamingTimeout.toMillis)
+        awaitOffsetWithTimeout(q, 0,
+          KafkaSourceOffset(partitionOffsets.transform((_, _) => 3L)))
       },
       CheckAnswer(-20, -21, -22, 0, 1, 2, 11, 12, 22),
       StopStream,
@@ -2445,8 +2461,8 @@ abstract class KafkaSourceSuiteBase extends KafkaSourceTest {
       Execute { q =>
         val partitions = (0 to 4).map(new TopicPartition(topic, _))
         // wait to reach the last offset in every partition
-        q.awaitOffset(
-          0, KafkaSourceOffset(partitions.map(tp => tp -> 3L).toMap), streamingTimeout.toMillis)
+        awaitOffsetWithTimeout(
+          q, 0, KafkaSourceOffset(partitions.map(tp => tp -> 3L).toMap))
       },
       CheckAnswer(-21, -22, -11, -12, 2, 12, 20, 21, 22),
       StopStream,
@@ -2497,7 +2513,7 @@ abstract class KafkaSourceSuiteBase extends KafkaSourceTest {
             tp -> 5L // we added 2 more records to partition 4
           }
         }.toMap
-        q.awaitOffset(0, KafkaSourceOffset(partAndOffsets), streamingTimeout.toMillis)
+        awaitOffsetWithTimeout(q, 0, KafkaSourceOffset(partAndOffsets))
       },
       CheckAnswer(-21, -22, -11, -12, 2, 12, 23, 24),
       StopStream,
