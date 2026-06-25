@@ -31,7 +31,7 @@ import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito._
 import org.mockito.invocation.InvocationOnMock
 import org.roaringbitmap.RoaringBitmap
-import org.scalatest.concurrent.{Signaler, ThreadSignaler, TimeLimits}
+import org.scalatest.concurrent.{Eventually, Signaler, ThreadSignaler, TimeLimits}
 import org.scalatest.exceptions.TestFailedException
 import org.scalatest.time.SpanSugar._
 
@@ -180,7 +180,8 @@ class DummyScheduledFuture(
 
 class DAGSchedulerSuiteDummyException extends Exception
 
-class DAGSchedulerSuite extends SparkFunSuite with TempLocalSparkContext with TimeLimits {
+class DAGSchedulerSuite extends SparkFunSuite with TempLocalSparkContext with TimeLimits
+  with Eventually {
 
   import DAGSchedulerSuite._
 
@@ -5811,6 +5812,19 @@ class DAGSchedulerSuite extends SparkFunSuite with TempLocalSparkContext with Ti
       }
       sc.addSparkListener(listener)
 
+      // Shuffle merge finalization (and hence the resulting SparkListenerStageCompleted) can be
+      // driven by an asynchronous finalize task, so the listener may observe the completion
+      // slightly after the driving event has been processed. Drain the DAGScheduler event loop
+      // and the listener bus, then poll until `completedStage` reaches the expected value so the
+      // assertion is deterministic without weakening the expected ordering.
+      def assertCompletedStage(expected: List[Int]): Unit = {
+        eventually(timeout(10.seconds), interval(10.milliseconds)) {
+          dagEventProcessLoopTester.runEvents()
+          sc.listenerBus.waitUntilEmpty()
+          assert(completedStage === expected)
+        }
+      }
+
       val fetchFailParentPartition = 0
 
       val shuffleMapRdd0 = new MyRDD(sc, 2, Nil)
@@ -5827,8 +5841,7 @@ class DAGSchedulerSuite extends SparkFunSuite with TempLocalSparkContext with Ti
       // Map stage completes successfully,
       completeShuffleMapStageSuccessfully(0, 0, 3, Seq("hostA", "hostB"))
       taskIdCount += 2
-      sc.listenerBus.waitUntilEmpty()
-      assert(completedStage === List(0))
+      assertCompletedStage(List(0))
 
       // Now submit the first reducer stage
       submitMapStage(shuffleDep1)
@@ -5873,8 +5886,7 @@ class DAGSchedulerSuite extends SparkFunSuite with TempLocalSparkContext with Ti
           createArray(2, 2L), mapTaskId = taskIdCount)))
       taskIdCount += 1
 
-      sc.listenerBus.waitUntilEmpty()
-      assert(completedStage === List(0, 2))
+      assertCompletedStage(List(0, 2))
 
       // the stages will now get resubmitted due to the failure
       Thread.sleep(DAGScheduler.RESUBMIT_TIMEOUT * 2)
@@ -5901,8 +5913,7 @@ class DAGSchedulerSuite extends SparkFunSuite with TempLocalSparkContext with Ti
       dagEventProcessLoopTester.runEvents()
 
       // The retries should succeed
-      sc.listenerBus.waitUntilEmpty()
-      assert(completedStage === List(0, 2, 1, 2))
+      assertCompletedStage(List(0, 2, 1, 2))
 
       // Now submit the entire dag again
       // This will add 3 new stages.
@@ -5912,9 +5923,7 @@ class DAGSchedulerSuite extends SparkFunSuite with TempLocalSparkContext with Ti
 
       // Only the last stage needs to execute, and those tasks - so completed stages should not
       // change.
-      sc.listenerBus.waitUntilEmpty()
-
-      assert(completedStage === List(0, 2, 1, 2))
+      assertCompletedStage(List(0, 2, 1, 2))
 
       // All other stages should be done, and only the final stage should be waiting
       assert(scheduler.runningStages.size === 1)
@@ -5923,8 +5932,7 @@ class DAGSchedulerSuite extends SparkFunSuite with TempLocalSparkContext with Ti
 
       complete(taskSets.filter(_.stageId == 5).head, Seq((Success, 1), (Success, 2)))
 
-      sc.listenerBus.waitUntilEmpty()
-      assert(completedStage === List(0, 2, 1, 2, 5))
+      assertCompletedStage(List(0, 2, 1, 2, 5))
     }
   }
 
