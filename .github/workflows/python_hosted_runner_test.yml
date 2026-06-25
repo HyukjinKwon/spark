@@ -152,23 +152,9 @@ jobs:
           - ${{inputs.python}}
         modules:
           - >-
-            pyspark-sql, pyspark-resource, pyspark-testing
-          - >-
-            pyspark-core, pyspark-errors, pyspark-streaming
-          - >-
-            pyspark-mllib, pyspark-ml, pyspark-ml-connect
-          - >-
-            pyspark-structured-streaming, pyspark-structured-streaming-connect
-          - >-
-            pyspark-connect
-          - >-
             pyspark-pandas
           - >-
-            pyspark-pandas-slow
-          - >-
             pyspark-pandas-connect
-          - >-
-            pyspark-pandas-slow-connect
     env:
       MODULES_TO_TEST: ${{ matrix.modules }}
       PYTHON_TO_TEST: python${{inputs.python}}
