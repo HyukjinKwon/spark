@@ -16,7 +16,7 @@
  */
 package org.apache.spark.sql.connect.planner
 
-import java.io.{DataInputStream, EOFException, IOException, InterruptedIOException}
+import java.io.{DataInputStream, EOFException, InterruptedIOException, IOException}
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
