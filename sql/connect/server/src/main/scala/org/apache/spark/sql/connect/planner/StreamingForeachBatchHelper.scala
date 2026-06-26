@@ -55,8 +55,8 @@ object StreamingForeachBatchHelper extends Logging {
    *
    * `dataIn` is backed by a blocking `SocketChannel` exposed through `Channels.newInputStream`,
    * whose `read()` ignores `Thread.interrupt()`. The micro-batch stream-execution thread blocks
-   * here while the Python worker processes a batch, so without this `query.stop()` cannot abort the
-   * read and `StreamExecution.interruptAndAwaitExecutionThreadTermination` times out after
+   * here while the Python worker processes a batch, so without this `query.stop()` cannot abort
+   * the read and `StreamExecution.interruptAndAwaitExecutionThreadTermination` times out after
    * `spark.sql.streaming.stopTimeout`.
    *
    * A short-lived daemon watchdog waits for the calling thread to be interrupted; when that
@@ -66,7 +66,9 @@ object StreamingForeachBatchHelper extends Logging {
    * stops promptly. In the normal (non-interrupted) case the watchdog exits as soon as the read
    * returns and adds no overhead beyond a parked thread.
    */
-  private def interruptiblyReadInt(dataIn: DataInputStream, runner: StreamingPythonRunner): Int = {
+  private def interruptiblyReadInt(
+      dataIn: DataInputStream,
+      runner: StreamingPythonRunner): Int = {
     val readerThread = Thread.currentThread()
     val interruptedByWatchdog = new AtomicBoolean(false)
     val done = new CountDownLatch(1)
@@ -97,7 +99,8 @@ object StreamingForeachBatchHelper extends Logging {
         // the interrupt status so the micro-batch loop observes it and the stream thread stops.
         readerThread.interrupt()
         throw new InterruptedIOException("foreachBatch Python worker read interrupted on stop")
-          .initCause(e).asInstanceOf[InterruptedIOException]
+          .initCause(e)
+          .asInstanceOf[InterruptedIOException]
     } finally {
       done.countDown()
       watchdog.interrupt()
