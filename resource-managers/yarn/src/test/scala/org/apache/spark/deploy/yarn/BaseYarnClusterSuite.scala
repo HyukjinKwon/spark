@@ -225,7 +225,16 @@ abstract class BaseYarnClusterSuite extends SparkFunSuite with Matchers {
 
     val handle = launcher.startApplication()
     try {
-      eventually(timeout(3.minutes), interval(1.second)) {
+      // Wait for the launched application to reach a final state. YarnClusterSuite runs ~two
+      // dozen applications back-to-back against a single in-JVM mini YARN cluster; late in the
+      // run the mini RM/NM, the driver subprocess and the container JVMs contend for CPU on a
+      // single CI runner, so an application submitted near the end can take noticeably longer to
+      // schedule, launch its AM and finish than one submitted early. A 3-minute budget was
+      // observed to be too tight on the slower scheduled lanes (Maven JDK17/JDK21-ARM/JDK25),
+      // where the last few apps timed out with "handle.getState().isFinal() was false" even
+      // though nothing was actually wrong. Give a more generous budget so transient scheduling
+      // slowness does not fail the suite; a genuinely stuck app still fails, just later.
+      eventually(timeout(5.minutes), interval(1.second)) {
         assert(handle.getState().isFinal())
       }
     } finally {

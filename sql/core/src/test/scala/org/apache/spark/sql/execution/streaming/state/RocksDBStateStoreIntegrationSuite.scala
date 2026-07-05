@@ -398,8 +398,17 @@ class RocksDBStateStoreIntegrationSuite extends StreamTest
         (SQLConf.SHUFFLE_PARTITIONS.key -> "2"), // Use 2 partitions to test multiple providers
         (s"${RocksDBConf.ROCKSDB_SQL_CONF_NAME_PREFIX}.boundedMemoryUsage" -> "true")) {
 
-        // Clear any existing providers from previous tests
-        RocksDBMemoryManager.resetWriteBufferManagerAndCache
+        // Clear any existing providers from previous tests. A preceding test (e.g. the
+        // unbounded "RocksDB memory tracking integration" case) may still be tearing down
+        // its RocksDB instances on background threads; those instances can re-register with
+        // RocksDBMemoryManager after this reset and leak into the counts below. Wait until
+        // the global instance map is actually drained before starting this test's query so
+        // that the only instances present are the two bounded providers we create here.
+        eventually(timeout(Span(30, Seconds)), interval(Span(200, Millis))) {
+          RocksDBMemoryManager.resetWriteBufferManagerAndCache
+          assert(RocksDBMemoryManager.getNumRocksDBInstances(true) == 0)
+          assert(RocksDBMemoryManager.getNumRocksDBInstances(false) == 0)
+        }
 
         val inputData = MemoryStream[Int]
 
