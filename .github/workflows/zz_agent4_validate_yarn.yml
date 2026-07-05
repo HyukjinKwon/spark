@@ -34,11 +34,17 @@ jobs:
       - name: Install Python packages
         run: |
           python3.12 -m pip install 'numpy>=1.23.2' pyarrow 'pandas==2.3.3' pyyaml scipy
+      - name: Build Spark assembly (required by YarnClusterSuite spark-submit)
+        shell: 'script -q -e -c "bash {0}"'
+        run: |
+          export TERM=vt100
+          # YarnClusterSuite launches real spark-submit subprocesses, so it needs the assembly jar.
+          build/sbt -Pyarn "yarn/Test/compile" "assembly/package"
       - name: Run YarnClusterSuite (yarn module)
         shell: 'script -q -e -c "bash {0}"'
         run: |
           export TERM=vt100
-          # Build + run only the yarn module tests. YarnClusterSuite is the flaky one.
+          # SparkBuild sets -Dspark.test.home automatically for Test/javaOptions.
           build/sbt -Pyarn "yarn/testOnly org.apache.spark.deploy.yarn.YarnClusterSuite"
       - name: Upload unit tests log on failure
         if: ${{ !success() }}
