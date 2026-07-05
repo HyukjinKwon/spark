@@ -33,7 +33,9 @@ jobs:
           architecture: x64
       - name: Install Python packages
         run: |
-          python3.12 -m pip install 'numpy>=1.23.2' pyarrow 'pandas==2.3.3' pyyaml scipy
+          # Mirror the exact set the real build_and_test.yml installs, so the Spark Connect
+          # Python-in-YARN tests (which need grpcio/protobuf) run instead of erroring out.
+          python3.12 -m pip install 'numpy>=1.23.2' pyarrow 'pandas==2.3.3' pyyaml scipy unittest-xml-reporting 'lxml==4.9.4' 'grpcio==1.76.0' 'grpcio-status==1.76.0' 'protobuf==6.33.5' 'zstandard==0.25.0'
       - name: Build Spark assembly (required by YarnClusterSuite spark-submit)
         shell: 'script -q -e -c "bash {0}"'
         run: |
