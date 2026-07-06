@@ -22,15 +22,16 @@ jobs:
           java-version: 21
       - name: Build sql/core test deps once
         run: build/sbt "sql/Test/compile"
-      - name: Run injectFailure=true 10x, capture DIAG line + FetchFailed/recompute markers
+      - name: Run the FULL suite 6x, capture the DIAG line for the failing test + markers
         run: |
-          for i in $(seq 1 10); do
-            echo "===== iteration $i ====="
-            build/sbt "sql/testOnly org.apache.spark.sql.execution.metric.MetricsFailureInjectionSuite -- -z \"Non-deterministic stage block failure injection - injectFailure=true\"" > /tmp/it$i.log 2>&1 || true
-            if grep -q "injectFailure=true \*\*\* FAILED" /tmp/it$i.log; then res=FAIL; else res=PASS; fi
+          for i in $(seq 1 6); do
+            echo "===== iteration $i (full MetricsFailureInjectionSuite) ====="
+            build/sbt "sql/testOnly org.apache.spark.sql.execution.metric.MetricsFailureInjectionSuite" > /tmp/it$i.log 2>&1 || true
+            if grep -q "\*\*\* FAILED" /tmp/it$i.log; then res=FAIL; else res=PASS; fi
             echo "iteration $i: $res"
-            echo "  DIAG: $(grep -oE 'DIAG stage1=[0-9]+ stage2=[0-9]+ stage1SLAM=[^ )]+' /tmp/it$i.log | head -1)"
-            echo "  markers: FetchFailed=$(grep -c 'FetchFailed' /tmp/it$i.log) Resubmit=$(grep -c 'Resubmitting' /tmp/it$i.log) corrupt=$(grep -c 'Test injection: corrupted' /tmp/it$i.log) rollback=$(grep -c 'rollbackSucceedingStages\|indeterminate' /tmp/it$i.log)"
+            echo "  failed tests: $(grep -oE '- [^*]+ \*\*\* FAILED' /tmp/it$i.log | head -5 | tr '\n' '|')"
+            echo "  DIAG: $(grep -oE 'DIAG stage1=[0-9]+ stage2=[0-9]+ stage1SLAM=[^ )]+' /tmp/it$i.log | head -3 | tr '\n' ' ')"
+            echo "  totals: $(grep -oE 'Tests: succeeded [0-9]+, failed [0-9]+' /tmp/it$i.log | tail -1)"
           done
       - name: Upload one full log for inspection
         if: always()
