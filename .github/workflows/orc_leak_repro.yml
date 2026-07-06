@@ -55,30 +55,35 @@ jobs:
           key: orc-repro-${{ hashFiles('**/pom.xml', 'project/build.properties', 'build.sbt', 'project/plugins.sbt') }}
           restore-keys: |
             orc-repro-
-      - name: Run OrcSource suites repeatedly
+      - name: Focused merge-abort leak repro (tight loop, one JVM)
+        env:
+          ORC_REPRO_ITERS: "300"
+        run: |
+          export SBT_OPTS="-Xmx6g -Xss64m"
+          ./build/sbt \
+            "sql/testOnly org.apache.spark.sql.execution.datasources.orc.OrcLeakReproSuite" \
+            2>&1 | tee focused.log | grep -aE "LEAK REPRODUCED|ORC_REPRO done|possibly leaked file streams|\*\*\* ABORTED|Tests: succeeded" || true
+          echo "================ FOCUSED SUMMARY ================"
+          grep -aE "LEAK REPRODUCED|ORC_REPRO done" focused.log || echo "(no repro markers)"
+      - name: Full OrcSource suites repeatedly (each in own JVM via DEDICATED)
+        env:
+          DEDICATED_JVM_SBT_TESTS: "org.apache.spark.sql.execution.datasources.orc.OrcSourceV1Suite,org.apache.spark.sql.execution.datasources.orc.OrcSourceV2Suite"
         run: |
           export SBT_OPTS="-Xmx6g -Xss64m"
           N="${ITERATIONS}"
           fail=0
           for i in $(seq 1 "$N"); do
             echo "::group::iteration $i / $N"
-            if ./build/sbt \
+            ./build/sbt \
                 "sql/testOnly org.apache.spark.sql.execution.datasources.orc.OrcSourceV1Suite org.apache.spark.sql.execution.datasources.orc.OrcSourceV2Suite" \
-                2>&1 | tee iter_$i.log | tail -40; then
-              if grep -qE "\*\*\* ABORTED \*\*\*|possibly leaked file streams" iter_$i.log; then
-                echo "iteration $i: ABORTED / leaked stream detected"
-                fail=$((fail+1))
-              else
-                echo "iteration $i: OK"
-              fi
+                2>&1 | tee iter_$i.log | tail -12 || true
+            if grep -qaE "\*\*\* ABORTED \*\*\*|possibly leaked file streams" iter_$i.log; then
+              echo "iteration $i: ABORTED / leaked stream detected"; fail=$((fail+1))
             else
-              echo "iteration $i: sbt returned non-zero"
-              grep -aE "\*\*\* ABORTED \*\*\*|possibly leaked file streams|Tests: succeeded" iter_$i.log | tail -5 || true
-              fail=$((fail+1))
+              echo "iteration $i: OK"
             fi
             echo "::endgroup::"
           done
-          echo "================ SUMMARY ================"
+          echo "================ FULL SUMMARY ================"
           echo "failed/aborted iterations: $fail / $N"
           grep -aHE "possibly leaked file streams|\*\*\* ABORTED \*\*\*" iter_*.log || echo "no aborts observed"
-          # Do not fail the job on abort; we want the summary regardless.
