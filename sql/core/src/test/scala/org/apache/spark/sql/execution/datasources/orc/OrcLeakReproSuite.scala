@@ -35,6 +35,7 @@ import org.apache.spark.sql.test.SharedSparkSession
  * than the single occurrence in the real suite.
  */
 class OrcLeakReproSuite extends SharedSparkSession {
+  import testImplicits._
 
   private def mergeWithCorruptFileFailFast(): Unit = {
     withSQLConf(
