@@ -8,7 +8,7 @@ on:
 
 jobs:
   validate:
-    name: "MetricsFailureInjectionSuite x8 on ${{ matrix.os }}"
+    name: "MetricsFailureInjectionSuite (full) x8 on ${{ matrix.os }}"
     strategy:
       fail-fast: false
       matrix:
@@ -26,16 +26,16 @@ jobs:
           java-version: 21
       - name: Build sql/core test deps once
         run: build/sbt "sql/Test/compile"
-      - name: Run MetricsFailureInjectionSuite 8 times (was ~60% flaky before fix)
+      - name: Run FULL MetricsFailureInjectionSuite 8 times (was ~1/6 flaky before fix)
         run: |
           fails=0
-          for i in 1 2 3 4 5 6 7 8; do
+          for i in $(seq 1 8); do
             echo "===== iteration $i ====="
             if build/sbt "sql/testOnly org.apache.spark.sql.execution.metric.MetricsFailureInjectionSuite" > /tmp/it$i.log 2>&1; then
-              echo "iteration $i: PASS"
+              echo "iteration $i: PASS ($(grep -oE 'Tests: succeeded [0-9]+, failed [0-9]+' /tmp/it$i.log | tail -1))"
             else
               echo "iteration $i: FAIL"; fails=$((fails+1))
-              grep -nE "\*\*\* FAILED|was not greater|did not equal|Tests: succeeded" /tmp/it$i.log | tail -10 || true
+              grep -oE '- [^*]+ \*\*\* FAILED|was not greater|recompute after [0-9]+ attempts' /tmp/it$i.log | head -5 || true
             fi
           done
           echo "===== SUMMARY: $fails / 8 iterations FAILED ====="
