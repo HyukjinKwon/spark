@@ -1,0 +1,47 @@
+name: "[DO-NOT-MERGE] agent4 validate macOS UDS socket-path fix"
+
+on:
+  push:
+    branches:
+      - "ci-fix/agent4-macos-uds-path**"
+  workflow_dispatch:
+
+jobs:
+  validate-macos-uds:
+    name: "PythonUDFWorkerSpecificationSuite on ${{ matrix.os }}"
+    strategy:
+      fail-fast: false
+      matrix:
+        # macos-15 / macos-14 are arm64 and use the same short-$TMPDIR /var/folders path
+        # as macos-26, so they reproduce the AF_UNIX-path-too-long condition.
+        os: [macos-15, macos-14]
+    runs-on: ${{ matrix.os }}
+    env:
+      SPARK_LOCAL_IP: localhost
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Show TMPDIR (should be a long /var/folders path on macOS)
+        run: |
+          echo "TMPDIR=$TMPDIR"
+          echo "len=${#TMPDIR}"
+      - name: Install Java 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: zulu
+          java-version: 21
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+          architecture: arm64
+      - name: Install Python packages
+        run: |
+          python3.11 -m pip install 'numpy>=1.23.2' pyarrow 'pandas==2.3.3' pyyaml scipy
+      - name: Run the UDS worker-spec suites (formerly 'AF_UNIX path too long')
+        run: |
+          # udf-worker-core unit suites that bind the direct-worker UDS socket,
+          # plus the sql/core suite that actually failed on macos-26.
+          build/sbt -Phive \
+            "udf-worker-core/testOnly org.apache.spark.udf.worker.core.DirectWorkerDispatcherSuite org.apache.spark.udf.worker.core.WorkerSessionSuite" \
+            "sql/testOnly org.apache.spark.sql.execution.externalUDF.PythonUDFWorkerSpecificationSuite"
