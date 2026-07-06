@@ -348,7 +348,10 @@ class MetricsFailureInjectionSuite
 
     runQueryWithMetrics() { finalDf =>
       if (injectFailure) {
-        assert(stage1Metric.value > 300)
+        // DIAG (temporary): surface actual values to distinguish "no recompute" (==300) from partial.
+        assert(stage1Metric.value > 300,
+          s"DIAG stage1=${stage1Metric.value} stage2=${stage2Metric.value} " +
+          s"stage1SLAM=${stage1SLAMetric.lastAttemptValueForHighestRDDId()}")
         // The non-deterministic UDF in stage 1 makes mapper 0's recompute produce a different
         // checksum from its corrupted first attempt, which fires rollbackSucceedingStages and
         // re-runs stage 2 in full. The raw stage 2 accumulator therefore overcounts; SLAM
