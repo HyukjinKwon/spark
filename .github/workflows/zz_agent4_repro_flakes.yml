@@ -1,0 +1,47 @@
+name: "[DO-NOT-MERGE] agent4 reproduce foreach + metrics flakes"
+
+on:
+  push:
+    branches:
+      - "ci-fix/agent4-repro-flakes**"
+  workflow_dispatch:
+
+jobs:
+  repro:
+    name: "repro ${{ matrix.suite }} x5 on ${{ matrix.os }}"
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15]
+        suite:
+          - "org.apache.spark.sql.streaming.StreamRealTimeModeE2ESuite"
+          - "org.apache.spark.sql.execution.metric.MetricsFailureInjectionSuite"
+    runs-on: ${{ matrix.os }}
+    env:
+      SPARK_LOCAL_IP: localhost
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Install Java 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: zulu
+          java-version: 21
+      - name: Build sql/core test deps once
+        run: build/sbt "sql/Test/compile"
+      - name: Run the suite 5 times, report per-iteration pass/fail
+        run: |
+          fails=0
+          for i in 1 2 3 4 5; do
+            echo "===== iteration $i: ${{ matrix.suite }} ====="
+            if build/sbt "sql/testOnly ${{ matrix.suite }}" > /tmp/it$i.log 2>&1; then
+              echo "iteration $i: PASS"
+            else
+              echo "iteration $i: FAIL"
+              fails=$((fails+1))
+              echo "----- failure excerpt (iteration $i) -----"
+              grep -nE "\*\*\* FAILED|did not equal|was not greater|InterruptedException|numRunningTasks|Tests: succeeded" /tmp/it$i.log | tail -20 || true
+            fi
+          done
+          echo "===== SUMMARY ${{ matrix.suite }}: $fails / 5 iterations FAILED ====="
+          # Do not fail the job on flakes; we want the count. (The reproduction itself is the signal.)
