@@ -266,7 +266,16 @@ class MetricsFailureInjectionSuite
       withTable("test_table") {
         setUpTestTable("test_table")
         withSparkContextConf(
-            config.Tests.INJECT_SHUFFLE_FETCH_FAILURES.key -> injectFailure.toString) {
+            config.Tests.INJECT_SHUFFLE_FETCH_FAILURES.key -> injectFailure.toString,
+            // Corrupt mapper-0 at registration (delay 0) rather than the default delay of 1.
+            // With the default, the corruption + epoch bump race the downstream consumer's fetch:
+            // if the consumer reads the still-good MapStatus first, no FetchFailed fires, stage 1
+            // is never recomputed, and `stage1Metric.value > 300` fails with "300 was not greater
+            // than 300" (flaky ~60% of runs on slower/differently-scheduled hosts such as macOS
+            // arm64). Corrupting at registration makes the consumer always see the bad location,
+            // so the recompute is deterministic. The delayed-corruption path itself is covered by
+            // the dedicated "... with delayed corruption" tests below.
+            config.Tests.INJECT_SHUFFLE_FETCH_FAILURES_DOWNSTREAM_DELAY.key -> "0") {
           val stage1MetricsExpr = incrementMetrics(Seq(stage1Metric, stage1SLAMetric))
           val stage1 = spark.read.table("test_table").filter(Column(stage1MetricsExpr))
           val stage2MetricsExpr = incrementMetrics(Seq(stage2Metric, stage2SLAMetric))
