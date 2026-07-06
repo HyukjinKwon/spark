@@ -20,6 +20,9 @@
 name: "ORC leak repro"
 
 on:
+  push:
+    branches:
+      - "deflake/**"
   workflow_dispatch:
     inputs:
       iterations:
@@ -27,9 +30,12 @@ on:
         required: true
         default: "8"
 
+env:
+  ITERATIONS: ${{ github.event.inputs.iterations || '10' }}
+
 jobs:
   orc-repro:
-    name: Orc suites x${{ github.event.inputs.iterations }}
+    name: Orc suites repro
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -52,7 +58,7 @@ jobs:
       - name: Run OrcSource suites repeatedly
         run: |
           export SBT_OPTS="-Xmx6g -Xss64m"
-          N="${{ github.event.inputs.iterations }}"
+          N="${ITERATIONS}"
           fail=0
           for i in $(seq 1 "$N"); do
             echo "::group::iteration $i / $N"
