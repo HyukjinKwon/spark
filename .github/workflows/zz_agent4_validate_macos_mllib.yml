@@ -1,7 +1,9 @@
 name: "[DO-NOT-MERGE] agent4 validate macOS mllib FP-tolerance fix"
 
 on:
-  # Manual only: macOS runners are scarce; trigger this after the UDS-path macOS run frees a runner.
+  push:
+    branches:
+      - "ci-fix/agent4-mllib-fp-tol**"
   workflow_dispatch:
 
 jobs:
