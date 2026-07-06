@@ -1,0 +1,53 @@
+name: "[DO-NOT-MERGE] agent4 validate UDS + pipelined UDF fix"
+
+on:
+  push:
+    branches:
+      - "ci-fix/agent4-uds-pipelined**"
+  workflow_dispatch:
+
+jobs:
+  validate-uds-pipelined:
+    name: "pipelined UDF over UDS (JDK 17)"
+    runs-on: ubuntu-latest
+    env:
+      SPARK_LOCAL_IP: localhost
+      # This is the combination that was broken: Unix domain sockets + pipelined transfer.
+      PYSPARK_UDS_MODE: "true"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Install Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: zulu
+          java-version: 17
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+          architecture: x64
+      - name: Install Python packages
+        run: |
+          python3.12 -m pip install 'numpy>=1.23.2' pyarrow 'pandas==2.3.3' pyyaml scipy unittest-xml-reporting 'lxml==4.9.4' 'grpcio==1.76.0' 'grpcio-status==1.76.0' 'protobuf==6.33.5' 'zstandard==0.25.0'
+      - name: Build Spark (package, with Hive)
+        shell: 'script -q -e -c "bash {0}"'
+        run: |
+          export TERM=vt100
+          build/sbt -Phive package
+      - name: Run pipelined-UDF tests over UDS (the formerly-broken path)
+        shell: 'script -q -e -c "bash {0}"'
+        run: |
+          export TERM=vt100
+          # PYSPARK_UDS_MODE=true -> spark.python.unix.domain.socket.enabled=true (context.py).
+          # test_pipelined_udf sets spark.python.udf.pipelined.enabled=true. Together they exercise
+          # BasePythonRunner.createPipelinedDataIn over a Unix domain socket, which threw
+          # UnsupportedOperationException before this fix.
+          python/run-tests --python-executables python3.12 \
+            --testnames "pyspark.sql.tests.pandas.test_pipelined_udf"
+      - name: Run a broader Arrow-UDF sample over UDS
+        shell: 'script -q -e -c "bash {0}"'
+        run: |
+          export TERM=vt100
+          python/run-tests --python-executables python3.12 \
+            --testnames "pyspark.sql.tests.arrow.test_arrow_python_udf"
