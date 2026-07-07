@@ -30,7 +30,7 @@ jobs:
       packages: write
     name: Run
     uses: ./.github/workflows/maven_test.yml
-    if: github.repository == 'apache/spark'
+    if: github.repository == 'HyukjinKwon/spark'
     with:
       java: 21
       os: macos-26
