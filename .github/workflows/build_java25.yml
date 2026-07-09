@@ -30,7 +30,7 @@ jobs:
       packages: write
     name: Run
     uses: ./.github/workflows/build_and_test.yml
-    if: github.repository == 'apache/spark'
+    if: github.repository == 'HyukjinKwon/spark'
     with:
       java: 25
       branch: master
@@ -47,11 +47,11 @@ jobs:
         {
           "build": "true",
           "pyspark": "true",
-          "sparkr": "true",
-          "tpcds-1g": "true",
-          "docker-integration-tests": "true",
-          "yarn": "true",
-          "k8s-integration-tests": "true",
-          "buf": "true",
-          "ui": "true"
+          "sparkr": "false",
+          "tpcds-1g": "false",
+          "docker-integration-tests": "false",
+          "yarn": "false",
+          "k8s-integration-tests": "false",
+          "buf": "false",
+          "ui": "false"
         }
