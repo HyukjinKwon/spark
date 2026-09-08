@@ -122,4 +122,21 @@ class KafkaRedactionUtilSuite extends SparkFunSuite with KafkaDelegationTokenTes
     assert(redactedJaasParams.contains(tokenId1))
     assert(!redactedJaasParams.contains(tokenPassword1))
   }
+
+  test("redactJaasParam should redact credentials in all quoting styles and clientSecret") {
+    val prefix = "org.apache.kafka.common.security.plain.PlainLoginModule required username=\"u\" "
+    val oauth = "org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required " +
+      "clientId=\"id\" "
+    val cases = Seq(
+      prefix + "password=\"double-quoted-secret\";" -> "double-quoted-secret",
+      prefix + "password='single-quoted-secret';" -> "single-quoted-secret",
+      prefix + "password=unquoted-secret;" -> "unquoted-secret",
+      oauth + "clientSecret=\"oauth-secret\";" -> "oauth-secret"
+    )
+    cases.foreach { case (param, secret) =>
+      val redacted = KafkaRedactionUtil.redactJaasParam(param)
+      assert(!redacted.contains(secret), s"credential not redacted in output: $redacted")
+      assert(redacted.contains(REDACTION_REPLACEMENT_TEXT), s"no redaction marker in: $redacted")
+    }
+  }
 }

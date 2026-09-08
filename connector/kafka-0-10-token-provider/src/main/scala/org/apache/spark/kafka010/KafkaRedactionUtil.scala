@@ -42,9 +42,17 @@ object KafkaRedactionUtil extends Logging {
     }
   }
 
+  // Matches JAAS credential entries such as `password="..."`, `password='...'`, `password=value`
+  // and `clientSecret=...` (used by the OAUTHBEARER login module), regardless of quoting style.
+  // The previous implementation only matched double-quoted `password="..."`, so single-quoted,
+  // unquoted, and non-password credential fields (e.g. OAUTHBEARER clientSecret) were not redacted.
+  private val jaasCredentialPattern =
+    "(?i)(password|clientSecret)\\s*=\\s*(\"[^\"]*\"|'[^']*'|[^\\s;]+)".r
+
   def redactJaasParam(param: String): String = {
     if (param != null && !param.isEmpty) {
-      param.replaceAll("password=\".*\"", s"""password="$REDACTION_REPLACEMENT_TEXT"""")
+      jaasCredentialPattern.replaceAllIn(
+        param, m => s"""${m.group(1)}="$REDACTION_REPLACEMENT_TEXT"""")
     } else {
       param
     }
