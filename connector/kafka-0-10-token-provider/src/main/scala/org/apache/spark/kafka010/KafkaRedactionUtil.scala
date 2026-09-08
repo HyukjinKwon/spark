@@ -42,9 +42,17 @@ object KafkaRedactionUtil extends Logging {
     }
   }
 
+  // Matches sensitive JAAS entries such as `password="..."`, `password='...'`, `password=secret`
+  // and `clientSecret=...` (used by the OAUTHBEARER login module), regardless of quoting style.
+  // The previous implementation only matched double-quoted `password="..."`, which left
+  // single-quoted, unquoted and non-password secrets (e.g. OAUTHBEARER clientSecret) in the clear.
+  private val jaasSensitiveValue =
+    "(?i)(password|clientSecret)\\s*=\\s*(\"[^\"]*\"|'[^']*'|[^\\s;]+)".r
+
   def redactJaasParam(param: String): String = {
     if (param != null && !param.isEmpty) {
-      param.replaceAll("password=\".*\"", s"""password="$REDACTION_REPLACEMENT_TEXT"""")
+      jaasSensitiveValue.replaceAllIn(
+        param, m => s"""${m.group(1)}="$REDACTION_REPLACEMENT_TEXT"""")
     } else {
       param
     }

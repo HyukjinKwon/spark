@@ -33,6 +33,7 @@ import org.apache.spark.internal.LogKeys.{FIELD_NAME, FIELD_TYPE, RECURSIVE_DEPT
 import org.apache.spark.sql.avro.AvroOptions.RECURSIVE_FIELD_MAX_DEPTH_LIMIT
 import org.apache.spark.sql.catalyst.parser.CatalystSqlParser
 import org.apache.spark.sql.catalyst.util.CharVarcharUtils
+import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.types.Decimal.minBytesForPrecision
 
@@ -115,8 +116,36 @@ object SchemaConverters extends Logging {
     mapSchema
   }
 
+  // Parses the Catalyst type carried in the `spark.sql.catalyst.type` Avro property. When
+  // `spark.sql.avro.catalystTypeParsingMaxDepth` is set to a positive value, the nesting depth of
+  // the type string is checked first, so a deeply nested value in an untrusted Avro file cannot
+  // exhaust the driver stack inside the recursive-descent parser. The default (-1) disables the
+  // check and preserves the previous behavior.
+  private def parseCatalystType(catalystTypeAttrValue: String): DataType = {
+    val maxDepth = SQLConf.get.getConf(SQLConf.AVRO_CATALYST_TYPE_PARSING_MAX_DEPTH)
+    if (maxDepth > 0) {
+      var depth = 0
+      var i = 0
+      while (i < catalystTypeAttrValue.length) {
+        catalystTypeAttrValue.charAt(i) match {
+          case '<' | '(' =>
+            depth += 1
+            if (depth > maxDepth) {
+              throw new IncompatibleSchemaException(
+                s"$CATALYST_TYPE_PROP_NAME nesting depth exceeds the configured maximum of " +
+                  s"$maxDepth (${SQLConf.AVRO_CATALYST_TYPE_PARSING_MAX_DEPTH.key}).")
+            }
+          case '>' | ')' => depth -= 1
+          case _ =>
+        }
+        i += 1
+      }
+    }
+    CatalystSqlParser.parseDataType(catalystTypeAttrValue)
+  }
+
   private def parseStampedStringType(catalystTypeAttrValue: String): StringType = {
-    CatalystSqlParser.parseDataType(catalystTypeAttrValue) match {
+    parseCatalystType(catalystTypeAttrValue) match {
       case s: StringType => s
       case other =>
         throw new IncompatibleSchemaException(
@@ -138,7 +167,7 @@ object SchemaConverters extends Logging {
           val catalystType = if (catalystTypeAttrValue == null) {
             IntegerType
           } else {
-            CatalystSqlParser.parseDataType(catalystTypeAttrValue)
+            parseCatalystType(catalystTypeAttrValue)
           }
           SchemaType(catalystType, nullable = false)
       }
@@ -173,7 +202,7 @@ object SchemaConverters extends Logging {
           val nanosType = if (catalystTypeAttrValue == null) {
             TimestampLTZNanosType()
           } else {
-            CatalystSqlParser.parseDataType(catalystTypeAttrValue)
+            parseCatalystType(catalystTypeAttrValue)
               .asInstanceOf[TimestampLTZNanosType]
           }
           SchemaType(nanosType, nullable = false)
@@ -182,7 +211,7 @@ object SchemaConverters extends Logging {
           val nanosType = if (catalystTypeAttrValue == null) {
             TimestampNTZNanosType()
           } else {
-            CatalystSqlParser.parseDataType(catalystTypeAttrValue)
+            parseCatalystType(catalystTypeAttrValue)
               .asInstanceOf[TimestampNTZNanosType]
           }
           SchemaType(nanosType, nullable = false)
@@ -193,7 +222,7 @@ object SchemaConverters extends Logging {
           val timeType = if (catalystTypeAttrValue == null) {
             TimeType(TimeType.MICROS_PRECISION)
           } else {
-            CatalystSqlParser.parseDataType(catalystTypeAttrValue).asInstanceOf[TimeType]
+            parseCatalystType(catalystTypeAttrValue).asInstanceOf[TimeType]
           }
           SchemaType(timeType, nullable = false)
         case _ =>
@@ -201,7 +230,7 @@ object SchemaConverters extends Logging {
           val catalystType = if (catalystTypeAttrValue == null) {
             LongType
           } else {
-            CatalystSqlParser.parseDataType(catalystTypeAttrValue)
+            parseCatalystType(catalystTypeAttrValue)
           }
           SchemaType(catalystType, nullable = false)
       }

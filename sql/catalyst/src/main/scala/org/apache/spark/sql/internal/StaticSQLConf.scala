@@ -42,6 +42,21 @@ object StaticSQLConf {
     .stringConf
     .createWithDefault(Utils.resolveURI("spark-warehouse").toString)
 
+  val ML_MAX_NUM_FEATURES = buildStaticConf("spark.sql.ml.maxNumFeatures")
+    .internal()
+    .doc("The maximum number of features accepted from untrusted ML inputs, where a " +
+      "feature/attribute/vector count is derived from a data file, column metadata, or a " +
+      "stored vector rather than from trusted code: the number of features inferred from a " +
+      "libsvm file, the number of attributes declared in ML column metadata, and the declared " +
+      "size of a sparse vector deserialized from storage (which becomes the dense length on " +
+      "densification). A crafted input can otherwise declare a huge count and drive an unbounded " +
+      "allocation. This is a static conf so the value can be read once and cached, keeping the " +
+      "per-row vector-deserialization check allocation-free. The default of -1 disables the " +
+      "check and preserves the previous behavior; set a positive value to reject larger counts.")
+    .version("4.3.0")
+    .intConf
+    .createWithDefault(-1)
+
   val CATALOG_DEFAULT_DATABASE =
     buildStaticConf(s"spark.sql.catalog.$SESSION_CATALOG_NAME.defaultDatabase")
     .doc("The default database for session catalog.")
