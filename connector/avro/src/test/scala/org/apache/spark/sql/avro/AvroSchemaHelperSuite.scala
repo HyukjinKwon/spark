@@ -21,9 +21,28 @@ import org.apache.avro.SchemaBuilder
 import org.apache.spark.sql.avro.AvroUtils.AvroMatchedField
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.test.SharedSparkSession
-import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
+import org.apache.spark.sql.types.{ArrayType, IntegerType, StringType, StructField, StructType}
 
 class AvroSchemaHelperSuite extends SharedSparkSession {
+
+  test("catalyst type parse depth is bounded by spark.sql.avro.catalystTypeParsingMaxDepth") {
+    // An INT Avro field carrying a deeply nested Catalyst type in the spark.sql.catalyst.type
+    // property. Nesting depth here is 8 (each 'array<' adds one level).
+    val deepType = "array<" * 8 + "int" + ">" * 8
+    val avroSchema = SchemaBuilder.builder().intType()
+    avroSchema.addProp("spark.sql.catalyst.type", deepType)
+
+    // Default (-1): the depth check is disabled and parsing succeeds.
+    assert(SchemaConverters.toSqlType(avroSchema).dataType.isInstanceOf[ArrayType])
+
+    // With a lower limit, the deeply nested type is rejected before the parser recurses.
+    withSQLConf(SQLConf.AVRO_CATALYST_TYPE_PARSING_MAX_DEPTH.key -> "5") {
+      val msg = intercept[IncompatibleSchemaException] {
+        SchemaConverters.toSqlType(avroSchema)
+      }.getMessage
+      assert(msg.contains("nesting depth exceeds"))
+    }
+  }
 
   test("ensure schema is a record") {
     val avroSchema = SchemaBuilder.builder().intType()

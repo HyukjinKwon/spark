@@ -7016,6 +7016,18 @@ object SQLConf {
     .booleanConf
     .createWithDefault(true)
 
+  val AVRO_CATALYST_TYPE_PARSING_MAX_DEPTH =
+    buildConf("spark.sql.avro.catalystTypeParsingMaxDepth")
+      .internal()
+      .doc("The maximum nesting depth allowed when parsing the Catalyst type carried in the " +
+        "'spark.sql.catalyst.type' Avro schema property during schema inference. A deeply nested " +
+        "value in an Avro file can otherwise exhaust the driver stack while parsing. " +
+        "The default of -1 disables the check and preserves the previous behavior; set a " +
+        "positive value to reject types nested more deeply than the limit.")
+      .version("4.3.0")
+      .intConf
+      .createWithDefault(-1)
+
   val JSON_ENABLE_PARTIAL_RESULTS =
     buildConf("spark.sql.json.enablePartialResults")
       .internal()
