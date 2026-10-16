@@ -347,7 +347,10 @@ def _parse_memory(s: str) -> int:
     256
     >>> _parse_memory("2g")
     2048
+    >>> _parse_memory(" 512M ")
+    512
     """
+    s = s.strip()
     units = {"g": 1024, "m": 1, "t": 1 << 20, "k": 1.0 / 1024}
     if s[-1].lower() not in units:
         raise ValueError("invalid format: " + s)
