@@ -341,7 +341,7 @@ def add_noise(x):
 | jep | 4.3.x, 4.3.2 or later (`pip install "jep>=4.3.2,<4.4"`); Spark is built and tested against 4.3.2, and the plugin uses JEP internals that later minor versions may change |
 | `arrow-c-data` JAR | Bundled with Spark |
 | PyArrow | 18.0.0+ |
-| cloudpickle-rust | 0.1.0+, a PySpark dependency |
+| cloudpickle-rust | 0.3.0+, a PySpark dependency |
 | Python concurrency | One invocation at a time per executor (see below) |
 
 ### Executor concurrency

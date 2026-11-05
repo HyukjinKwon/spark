@@ -65,7 +65,7 @@ ignore = [
 
 [dependency-groups]
 internal_py4j = ["py4j>=0.10.9.9"]
-internal_cloudpickle_rust = ["cloudpickle-rust>=0.1.0"]
+internal_cloudpickle_rust = ["cloudpickle-rust>=0.3.0"]
 
 internal_numpy = ["numpy>=1.23.2"]
 internal_pandas = ["pandas>=2.2.0,<3.0.0"]

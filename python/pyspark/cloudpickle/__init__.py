@@ -26,22 +26,28 @@ dynamic functions and classes as ``pyspark.cloudpickle.cloudpickle.<name>``. The
 and ``cloudpickle_fast`` submodules are therefore aliases of the ones of ``cloudpickle_rust``.
 """
 
-import io
-import pickle
 import sys
-import types
-from typing import IO, Any, Callable, Optional, Tuple
+from typing import Any
 
-import cloudpickle_rust
 from cloudpickle_rust import (
+    CloudPickler,
+    Pickler,
     __version__,
     cloudpickle,
     cloudpickle_fast,
+    dump,
+    dumps,
     load,
     loads,
     register_pickle_by_value,
     unregister_pickle_by_value,
 )
+
+# Like cloudpickle 3.2, cloudpickle-rust sets the filename of the code it pickles by value to
+# "<dynamic-code>" by default, so that the payloads do not depend on where the code is defined.
+# Keep the original filenames instead: Spark shows them in the tracebacks of Python UDFs, and the
+# UDF profilers need them to show their results.
+cloudpickle.DYNAMIC_CODE_FILENAME = None
 
 sys.modules[__name__ + ".cloudpickle"] = cloudpickle
 sys.modules[__name__ + ".cloudpickle_fast"] = cloudpickle_fast
@@ -57,51 +63,6 @@ __all__ = [
     "register_pickle_by_value",
     "unregister_pickle_by_value",
 ]
-
-_base_dispatch_table = cloudpickle_rust.Pickler.dispatch_table
-_base_code_reduce = _base_dispatch_table[types.CodeType]
-
-
-def _code_reduce(obj: types.CodeType) -> Tuple[Any, Tuple[Any, ...]]:
-    # Like cloudpickle 3.2, cloudpickle-rust sets the filename of the code it pickles by value to
-    # "<dynamic-code>", so that the payloads do not depend on where the code is defined. Keep the
-    # original filename instead: Spark shows it in the tracebacks of Python UDFs, and the UDF
-    # profilers need it to show their results.
-    reconstructor, args = _base_code_reduce(obj)
-    try:
-        index = args.index("<dynamic-code>")
-    except ValueError:
-        return reconstructor, args
-    return reconstructor, args[:index] + (obj.co_filename,) + args[index + 1 :]
-
-
-class Pickler(cloudpickle_rust.Pickler):
-    # Of the same type as the dispatch table of cloudpickle-rust, whose lookups are native.
-    dispatch_table = type(_base_dispatch_table)(
-        {types.CodeType: _code_reduce}, *_base_dispatch_table.maps
-    )
-
-
-CloudPickler = Pickler
-
-
-def dump(
-    obj: Any,
-    file: IO[bytes],
-    protocol: Optional[int] = None,
-    buffer_callback: Optional[Callable[[pickle.PickleBuffer], Any]] = None,
-) -> None:
-    Pickler(file, protocol=protocol, buffer_callback=buffer_callback).dump(obj)
-
-
-def dumps(
-    obj: Any,
-    protocol: Optional[int] = None,
-    buffer_callback: Optional[Callable[[pickle.PickleBuffer], Any]] = None,
-) -> bytes:
-    with io.BytesIO() as file:
-        Pickler(file, protocol=protocol, buffer_callback=buffer_callback).dump(obj)
-        return file.getvalue()
 
 
 def __getattr__(name: str) -> Any:
